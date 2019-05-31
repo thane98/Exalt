@@ -18,6 +18,7 @@ jar {
 }
 
 task exc(type: Jar) {
+    exclude "decompiler/**"
     manifest {
         attributes 'Implementation-Title': 'Exalt Compiler CLI',
                 'Implementation-Version': version,
@@ -29,6 +30,7 @@ task exc(type: Jar) {
 }
 
 task exd(type: Jar) {
+    exclude "compiler/**"
     manifest {
         attributes 'Implementation-Title': 'Exalt Decompiler CLI',
                 'Implementation-Version': version,

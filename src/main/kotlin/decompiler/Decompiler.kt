@@ -5,10 +5,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 
-fun decompile(source: String, output: String) {
+fun decompile(source: String, output: String, enableExperimental: Boolean) {
     val file = Paths.get(source)
     if (!Files.exists(file) || Files.isDirectory(file))
         throw DecompileError("Unable to open source file.", -1)
-    val script = Decompiler3DS.decompile(Files.readAllBytes(file))
+    val script = Decompiler3DS.decompile(Files.readAllBytes(file), enableExperimental)
     Files.write(Paths.get(output), PrettyPrinter.print(script).toByteArray(StandardCharsets.UTF_8))
 }

@@ -25,7 +25,7 @@ private enum class ExprState {
     NORMAL, SHORTHAND_ASSIGNMENT
 }
 
-class Decompiler3DS private constructor(private val input: ByteArray) {
+class Decompiler3DS private constructor(private val input: ByteArray, private val enableExperimental: Boolean) {
     private var position = 0
     private val headers = mutableListOf<EventHeader>()
     private lateinit var textData: Map<Int, String>
@@ -62,7 +62,7 @@ class Decompiler3DS private constructor(private val input: ByteArray) {
             0x20 to listOf(ArgType.STRING, ArgType.INT)
         )
 
-        private val SHORTHAND_TOKENTYPES = hashMapOf(
+        private val SHORTHAND_TOKEN_TYPES = hashMapOf(
             Opcode3DS.PLUS to TokenType.ASSIGN_PLUS,
             Opcode3DS.MINUS to TokenType.ASSIGN_MINUS,
             Opcode3DS.TIMES to TokenType.ASSIGN_TIMES,
@@ -73,8 +73,8 @@ class Decompiler3DS private constructor(private val input: ByteArray) {
             Opcode3DS.FDIVIDE to TokenType.ASSIGN_FDIVIDE
         )
 
-        fun decompile(input: ByteArray): Block {
-            val decompiler = Decompiler3DS(input)
+        fun decompile(input: ByteArray, enableExperimental: Boolean): Block {
+            val decompiler = Decompiler3DS(input, enableExperimental)
             return decompiler.decompile()
         }
     }
@@ -196,9 +196,10 @@ class Decompiler3DS private constructor(private val input: ByteArray) {
         seek(header.bodyAddress)
         val block = decompileBlock()
         block.accept(GotoResolver(unresolvedGotos))
-        // On hold until break/continue are sorted out.
-//        block.accept(WhileFolder())
-//        block.accept(ForFolder())
+        if (enableExperimental) {
+            block.accept(WhileFolder())
+            block.accept(ForFolder())
+        }
         if (lastIsEmptyReturn(block))
             block.contents.removeAt(block.contents.lastIndex)
         // TODO: numVars
@@ -357,7 +358,8 @@ class Decompiler3DS private constructor(private val input: ByteArray) {
         position += 1 // Consume the complete assignment op.
         val rhs = popExpr()
         val lhs = getAssignmentLeftHandSide()
-        val type = SHORTHAND_TOKENTYPES[op] ?: throw DecompileError("Unexpected operator in shorthand assignment", position)
+        val type =
+            SHORTHAND_TOKEN_TYPES[op] ?: throw DecompileError("Unexpected operator in shorthand assignment", position)
         exprState = ExprState.NORMAL
         return ExprStmt(BinaryExpr(lhs, type, rhs))
     }
@@ -430,7 +432,7 @@ class Decompiler3DS private constructor(private val input: ByteArray) {
         position = start
         return length
     }
-    
+
     private fun popExpr(): Expr {
         if (exprStack.isEmpty())
             throw DecompileError("Expression stack unexpectedly empty", position)

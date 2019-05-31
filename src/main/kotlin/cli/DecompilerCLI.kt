@@ -12,6 +12,11 @@ class ExdArgs(parser: ArgParser) {
         help = "output file symbol"
     ).default("a.exl")
 
+    val experimental by parser.flagging(
+        "-e", "--experimental",
+        help = "enable experimental code transformations"
+    )
+
     val source by parser.positional(
         "SOURCE",
         help = "source file symbol"
@@ -21,7 +26,7 @@ class ExdArgs(parser: ArgParser) {
 fun main(args: Array<String>) = mainBody {
     ArgParser(args).parseInto(::ExdArgs).run {
         try {
-            decompile(source, output)
+            decompile(source, output, experimental)
         } catch (error: DecompileError) {
             println("Decompiling Failed!")
             if (error.address != -1)
