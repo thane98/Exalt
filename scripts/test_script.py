@@ -1,16 +1,11 @@
 import os, sys, subprocess
 
-if os.name == 'nt':
-    EXTENSION = ".exe"
-else:
-    EXTENSION = ""
-
 if "EXALT_BIN" not in os.environ:
     print("Please set EXALT_BIN to the path of exc and exd.")
     exit(1)
 EXALT_BIN = os.environ["EXALT_BIN"]
-EXD = EXALT_BIN + "/exd.jar" + EXTENSION
-EXC = EXALT_BIN + "/exc.jar" + EXTENSION
+EXD = EXALT_BIN + "/exd.jar"
+EXC = EXALT_BIN + "/exc.jar"
 
     
 if "TEST_SCRIPTS_ROOT" not in os.environ:
