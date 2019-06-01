@@ -96,18 +96,23 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
     }
 
     override fun visitVarRef(expr: VarRef) {
-        if (expr.isPointer)
-            sb.append('&')
-        sb.append('$').append(expr.symbol.frameID)
+        printRef(expr.isPointer, expr.symbol)
     }
 
     override fun visitArrayRef(expr: ArrayRef) {
-        if (expr.isPointer)
-            sb.append('&')
-        sb.append('$').append(expr.symbol.frameID)
+        printRef(expr.isPointer, expr.symbol)
         sb.append('[')
         expr.index.accept(this)
         sb.append(']')
+    }
+
+    private fun printRef(isPointer: Boolean, symbol: VarSymbol) {
+        if (isPointer)
+            sb.append('&')
+        if (symbol.name.isEmpty())
+            sb.append('$').append(symbol.frameID)
+        else
+            sb.append(symbol.name)
     }
 
     override fun visitBlock(stmt: Block) {
@@ -128,9 +133,11 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
 
     override fun visitFuncDecl(stmt: FuncDecl) {
         sb.append("func ").append(stmt.symbol.name).append('(')
-        for (i in 0 until stmt.symbol.arity) {
-            sb.append('v').append(i)
-            if (i != stmt.symbol.arity - 1)
+        for (sym in stmt.params) {
+            if (sym.isExternal)
+                sb.append('&')
+            sb.append(sym.name)
+            if (sym != stmt.params.last())
                 sb.append(", ")
         }
         sb.append(") ")

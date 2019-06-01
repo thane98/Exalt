@@ -30,11 +30,14 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
     private val headers = mutableListOf<EventHeader>()
     private lateinit var textData: Map<Int, String>
 
+    private val definedVars = hashMapOf<Int, VarSymbol>()
     private val unresolvedGotos = hashMapOf<Int, MutableList<Goto>>()
     private val exprStack = ArrayDeque<Expr>()
     private var exprState = ExprState.NORMAL
 
     companion object {
+        private val VAR_BASE_NAME = "v"
+
         private val SIGNATURES = hashMapOf(
             0x10 to listOf(ArgType.INT, ArgType.INT, ArgType.INT),
             0x11 to listOf(ArgType.INT, ArgType.INT, ArgType.INT),
@@ -189,10 +192,14 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
         return result
     }
 
-    private fun decompileEvent(header: EventHeader): FuncDecl {
+    private fun decompileEvent(header: EventHeader): AbstractEventDecl {
+        definedVars.clear()
+        if (header.type == 0)
+            defineFunctionParameters(header.arity)
         unresolvedGotos.clear()
         exprStack.clear()
         exprState = ExprState.NORMAL
+
         seek(header.bodyAddress)
         val block = decompileBlock()
         block.accept(GotoResolver(unresolvedGotos))
@@ -206,9 +213,21 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
         val symbol = EventSymbol(header.name, header.id, header.type, header.arity, -1)
 
         return if (header.type == 0)
-            FuncDecl(symbol, block)
+            FuncDecl(symbol, block, functionParametersToList(header.arity))
         else
             EventDecl(symbol, block, header.args)
+    }
+
+    private fun defineFunctionParameters(numParams: Int) {
+        for (i in 0 until numParams)
+            definedVars[i] = VarSymbol(VAR_BASE_NAME + i, i)
+    }
+
+    private fun functionParametersToList(numParams: Int): List<VarSymbol> {
+        val result = mutableListOf<VarSymbol>()
+        for (i in 0 until numParams)
+            result.add(definedVars[i]!!)
+        return result
     }
 
     private fun lastIsEmptyReturn(block: Block): Boolean {
@@ -229,8 +248,10 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
             when (val op = Opcode3DS.findByValue(next())) {
                 Opcode3DS.VAR_GET -> exprStack.push(decompileVarRef(false))
                 Opcode3DS.ARR_GET -> exprStack.push(decompileArrayRef(false))
+                Opcode3DS.PTR_GET -> exprStack.push(decompilePtr(false))
                 Opcode3DS.VAR_LOAD -> exprStack.push(decompileVarRef(true))
                 Opcode3DS.ARR_LOAD -> exprStack.push(decompileArrayRef(true))
+                Opcode3DS.PTR_LOAD -> exprStack.push(decompilePtr(true))
                 Opcode3DS.LOAD_BYTE -> exprStack.push(Literal(next().toInt()))
                 Opcode3DS.LOAD_SHORT -> exprStack.push(Literal(nextBigEndian(Short.SIZE_BYTES)))
                 Opcode3DS.LOAD_INT -> exprStack.push(Literal(nextBigEndian(Int.SIZE_BYTES)))
@@ -265,6 +286,7 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
                 Opcode3DS.JUMP_ZERO -> contents.add(decompileIf())
                 Opcode3DS.YIELD -> contents.add(Yield())
                 Opcode3DS.COPY_TOP -> contents.add(decompileMatch())
+                Opcode3DS.FORMAT -> contents.add(decompileFormat())
                 Opcode3DS.INC, Opcode3DS.DEC -> exprStack.push(decompileIncrement(op))
                 Opcode3DS.RETURN_FALSE -> contents.add(Return())
                 Opcode3DS.RETURN_TRUE -> contents.add(Return(Literal(1)))
@@ -276,6 +298,15 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
             }
         }
         return Block(contents)
+    }
+
+    private fun decompileFormat(): ExprStmt {
+        val numArgs = next().toInt()
+        val args = mutableListOf<Expr>()
+        for (i in 0 until numArgs)
+            args.add(exprStack.pop())
+        args.reverse()
+        return ExprStmt(Funcall("format", args))
     }
 
     private fun decompileTextRef(offsetSize: Int): Literal {
@@ -295,11 +326,25 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
     }
 
     private fun decompileVarRef(isPointer: Boolean): VarRef {
-        return VarRef(VarSymbol("", next().toInt()), isPointer)
+        val frameIndex = next().toInt()
+        val symbol = if (frameIndex in definedVars) {
+            definedVars[frameIndex]
+        } else {
+            val symbol = VarSymbol("", frameIndex)
+            definedVars[frameIndex] = symbol
+            symbol
+        }
+        return VarRef(symbol!!, isPointer)
     }
 
     private fun decompileArrayRef(isPointer: Boolean): ArrayRef {
         return ArrayRef(decompileVarRef(isPointer).symbol, popExpr(), isPointer)
+    }
+
+    private fun decompilePtr(isPointer: Boolean): ArrayRef {
+        val ref = decompileArrayRef(isPointer)
+        ref.symbol.isExternal = true
+        return ref
     }
 
     private fun decompileUnaryExpr(op: Opcode3DS): UnaryExpr {

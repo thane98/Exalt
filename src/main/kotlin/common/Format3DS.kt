@@ -15,8 +15,10 @@ class Format3DS {
 enum class Opcode3DS(val opcode: Byte) {
     VAR_GET(0x1),
     ARR_GET(0x3),
+    PTR_GET(0x5),
     VAR_LOAD(0x7),
     ARR_LOAD(0x9),
+    PTR_LOAD(0xB),
     LOAD_BYTE(0x19),
     LOAD_SHORT(0x1A),
     LOAD_INT(0x1B),
@@ -68,6 +70,7 @@ enum class Opcode3DS(val opcode: Byte) {
     JUMP_ZERO(0x4C),
     AND(0x4D),
     YIELD(0x4E),
+    FORMAT(0x50),
     INC(0x51),
     DEC(0x52),
     COPY_TOP(0x53),

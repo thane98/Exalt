@@ -250,17 +250,29 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
     override fun visitFuncall(expr: Funcall) {
         for (arg in expr.args)
             arg.accept(this)
-        if (expr.isLocalCall) {
-            result.add(Opcode3DS.LOCAL_CALL)
-            result.add(expr.callID)
-        } else {
-            result.add(Opcode3DS.GLOBAL_CALL)
-            result.addBigEndian(tryAddText(expr.target), Short.SIZE_BYTES)
-            result.add(expr.args.size)
+        when {
+            expr.target == "format" -> {
+                result.add(Opcode3DS.FORMAT)
+                result.add(expr.args.size)
+            }
+            expr.isLocalCall -> {
+                result.add(Opcode3DS.LOCAL_CALL)
+                result.add(expr.callID)
+            }
+            else -> {
+                result.add(Opcode3DS.GLOBAL_CALL)
+                result.addBigEndian(tryAddText(expr.target), Short.SIZE_BYTES)
+                result.add(expr.args.size)
+            }
         }
     }
 
     override fun visitVarRef(expr: VarRef) {
+        if (expr.symbol.isExternal) {
+            writePtr(expr.symbol.frameID, Literal(0), expr.isPointer)
+            return
+        }
+
         if (expr.isPointer)
             result.add(Opcode3DS.VAR_LOAD)
         else
@@ -269,12 +281,26 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
     }
 
     override fun visitArrayRef(expr: ArrayRef) {
+        if (expr.symbol.isExternal) {
+            writePtr(expr.symbol.frameID, expr.index, expr.isPointer)
+            return
+        }
+
         expr.index.accept(this)
         if (expr.isPointer)
             result.add(Opcode3DS.ARR_LOAD)
         else
             result.add(Opcode3DS.ARR_GET)
         result.add(expr.symbol.frameID)
+    }
+
+    private fun writePtr(baseIndex: Int, index: Expr, isPointer: Boolean) {
+        index.accept(this)
+        if (isPointer)
+            result.add(Opcode3DS.PTR_LOAD)
+        else
+            result.add(Opcode3DS.PTR_GET)
+        result.add(baseIndex)
     }
 
     override fun visitBlock(stmt: Block) {
@@ -306,7 +332,7 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
         return result
     }
 
-    private fun writeEventContents(event: FuncDecl, subheader: List<Byte>) {
+    private fun writeEventContents(event: AbstractEventDecl, subheader: List<Byte>) {
         val symbol = event.symbol
         val subheaderAddress = result.size + Format3DS.EVENT_HEADER_SIZE
         val bodyAddress = subheaderAddress + subheader.size
@@ -367,8 +393,13 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
 
     override fun visitExprStmt(stmt: ExprStmt) {
         stmt.expr.accept(this)
-        if (!(stmt.expr is BinaryExpr && stmt.expr.op.isAssignment()))
+        if (shouldConsumeTop(stmt.expr))
             result.add(Opcode3DS.CONSUME_TOP)
+    }
+
+    private fun shouldConsumeTop(expr: Expr): Boolean {
+        return !(expr is BinaryExpr && expr.op.isAssignment())
+                && !(expr is Funcall && expr.target == "format")
     }
 
     override fun visitReturn(stmt: Return) {

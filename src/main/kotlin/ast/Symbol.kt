@@ -4,7 +4,7 @@ open class Symbol(val name: String)
 
 class LabelSymbol(name: String, var address: Int = -1) : Symbol(name)
 
-class VarSymbol(name: String, var frameID: Int = -1) : Symbol(name)
+class VarSymbol(name: String, var frameID: Int = -1, var isExternal: Boolean = false) : Symbol(name)
 
 class Constant(name: String, val value: Literal) : Symbol(name)
 

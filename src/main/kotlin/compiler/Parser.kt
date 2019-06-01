@@ -186,11 +186,11 @@ class Parser(private val tokens: List<Token>, private val log: Log) {
         consume(TokenType.FUNC, TokenType.IDENTIFIER)
         val ident = previous
         consume(TokenType.LPAREN)
-        val arity = parseFuncParameters()
+        val params = parseFuncParameters()
         consume(TokenType.RPAREN)
         val body = parseBlock()
 
-        val sym = finishEventOrFunc(ident.literal as String, 0, arity)
+        val sym = finishEventOrFunc(ident.literal as String, 0, params.size)
         val calls = unresolvedCalls[ident.literal]
         if (calls != null) {
             for (call in calls)
@@ -199,19 +199,23 @@ class Parser(private val tokens: List<Token>, private val log: Log) {
         }
         symbolTable.exitScope()
         symbolTable.define(ident, sym)
-        return FuncDecl(sym, body)
+        return FuncDecl(sym, body, params)
     }
 
-    private fun parseFuncParameters(): Int {
-        var nextID = 0
+    private fun parseFuncParameters(): List<VarSymbol> {
+        val result = mutableListOf<VarSymbol>()
         if (!check(TokenType.RPAREN)) {
             do {
+                val isExternal = match(TokenType.BAND)
                 consume(TokenType.IDENTIFIER)
-                usedVars[nextID] = true
-                symbolTable.define(previous, VarSymbol(previous.literal as String, nextID++))
+                usedVars[result.size] = true
+                val sym = VarSymbol(previous.literal as String, result.size)
+                sym.isExternal = isExternal
+                symbolTable.define(previous, sym)
+                result.add(sym)
             } while (match(TokenType.COMMA))
         }
-        return nextID
+        return result
     }
 
     private fun parseConst(): Stmt? {

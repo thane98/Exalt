@@ -25,13 +25,17 @@ class Block(val contents: MutableList<Stmt>) : Stmt() {
     }
 }
 
-open class FuncDecl(val symbol: EventSymbol, val contents: Block) : Stmt() {
+abstract class AbstractEventDecl(val symbol: EventSymbol, val contents: Block) : Stmt()
+
+open class FuncDecl(symbol: EventSymbol, contents: Block, val params: List<VarSymbol>)
+    : AbstractEventDecl(symbol, contents) {
     override fun <T> accept(visitor: StmtVisitor<T>): T {
         return visitor.visitFuncDecl(this)
     }
 }
 
-class EventDecl(symbol: EventSymbol, contents: Block, val args: List<Literal>) : FuncDecl(symbol, contents) {
+class EventDecl(symbol: EventSymbol, contents: Block, val args: List<Literal>)
+    : AbstractEventDecl(symbol, contents) {
     override fun <T> accept(visitor: StmtVisitor<T>): T {
         return visitor.visitEventDecl(this)
     }
