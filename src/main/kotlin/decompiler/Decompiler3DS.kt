@@ -435,7 +435,20 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
     private fun decompileIf(): If {
         val cond = popExpr()
         val blockSize = nextBigEndian(Short.SIZE_BYTES) - 2
-        return If(cond, decompileBlock(blockSize), null)
+        if (enableExperimental && backHasElseGoto(blockSize)) {
+            val thenPart = decompileBlock(blockSize - 3)
+            next() // Consume jump opcode
+            val elseSize = nextBigEndian(Short.SIZE_BYTES) - 2
+            val elsePart = decompileBlock(elseSize)
+            return If(cond, thenPart, elsePart)
+        }
+        val thenPart = decompileBlock(blockSize)
+        return If(cond, thenPart, null)
+    }
+
+    private fun backHasElseGoto(blockSize: Int): Boolean {
+        val backIsGoto = input[position + blockSize - 3] == Opcode3DS.JUMP.opcode
+        return backIsGoto && readBigEndianInt(position + blockSize - 2, 2) > 0
     }
 
     private fun decompileMatch(): Match {
@@ -501,15 +514,19 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
     }
 
     private fun nextBigEndian(numBytes: Int): Int {
+        val result = readBigEndianInt(position, numBytes)
+        position += numBytes
+        return result
+    }
+
+    private fun readBigEndianInt(start: Int, numBytes: Int): Int {
         if (position + numBytes > input.size)
             throw DecompileError("Reached EOF while decompiling", position)
         if (numBytes == 1)
-            return next().toInt()
-
+            return input[start].toInt()
         assert(numBytes == Short.SIZE_BYTES || numBytes == Int.SIZE_BYTES)
         val buffer = ByteBuffer.allocate(numBytes).order(ByteOrder.BIG_ENDIAN)
-        buffer.put(input.sliceArray(position until position + numBytes))
-        position += numBytes
+        buffer.put(input.sliceArray(start until start + numBytes))
         return if (numBytes == Short.SIZE_BYTES)
             buffer.getShort(0).toInt()
         else
