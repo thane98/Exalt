@@ -1,0 +1,42 @@
+.root {
+    -fx-font-size: 11pt;
+}
+
+.progress-bar .bar {
+    -fx-background-color: red;
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0.416667em; /* 5 */
+}
+
+#failure-bar .bar {
+    -fx-background-color: maroon;
+}
+
+#success-bar .bar {
+    -fx-background-color: green;
+}
+
+.styled-text-area {
+    -fx-font-size: 12pt;
+}
+
+.lineno {
+    -fx-font-size: 12pt;
+}
+
+.keyword {
+    -fx-fill: purple;
+    -fx-font-weight: bold;
+}
+
+.string {
+    -fx-fill: mediumslateblue;
+}
+
+.comment {
+	-fx-fill: green;
+}
+
+.frame-ref {
+    -fx-fill: #ff6d12;
+}

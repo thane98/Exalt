@@ -27,7 +27,7 @@ class Log(private val sourceManager: SourceManager) {
         // Append base message (filename and error message).
         val sb = StringBuilder()
         val pos = error.position
-        if (pos.filePath != null)
+        if (pos.filePath != null && pos.filePath != SourceManager.IN_MEMORY_SOURCE_PATH)
             sb.append(pos.filePath).append('\n')
         sb.append(error.message).append('\n')
 
