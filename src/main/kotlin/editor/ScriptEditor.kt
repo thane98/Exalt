@@ -89,13 +89,20 @@ class ScriptEditor(title: String) : Tab(title) {
                     }
                 }
                 e.code == KeyCode.BACK_SPACE -> {
-                    if (targetParagraph.text.endsWith("    ")) {
+                    if (atEndOfIndent()) {
                         codeArea.deleteText(codeArea.caretPosition - 4, codeArea.caretPosition)
                         e.consume()
                     }
                 }
             }
         }
+    }
+
+    private fun atEndOfIndent(): Boolean {
+        val pos = codeArea.caretPosition
+        if (pos - 4 < 0)
+            return false
+        return codeArea.text.slice(pos - 4 until pos) == "    "
     }
 
     private fun tryOpenFile(file: File, experimental: Boolean): String {

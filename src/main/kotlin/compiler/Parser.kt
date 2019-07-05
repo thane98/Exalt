@@ -506,9 +506,13 @@ class Parser(private val tokens: List<Token>, private val log: Log) {
 
     internal fun consume(type: TokenType) {
         if (!match(type)) {
-            // Adjustment to make missing semicolons (usually) print the correct line.
-            val actualTok = if (type == TokenType.SEMICOLON) previous else peek()
-            val actual = actualTok.type.toString()
+            // Provide a more precise error message for semicolons.
+            if (type == TokenType.SEMICOLON)
+                throw CompileError("Expected semicolon after statement.", previous.pos)
+
+            // General case. Show expected token and what we actually found.
+            val actualTok = peek()
+            val actual = peek().type.toString()
             val expected = type.toString()
             throw CompileError("Expected \"$expected\", found \"$actual\".", actualTok.pos)
         }
