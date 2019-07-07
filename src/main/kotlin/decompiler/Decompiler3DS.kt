@@ -4,6 +4,7 @@ import ast.*
 import common.Format3DS
 import common.Opcode3DS
 import common.TokenType
+import common.TranslationEngine
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
@@ -36,7 +37,7 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
     private var exprState = ExprState.NORMAL
 
     companion object {
-        private val VAR_BASE_NAME = "v"
+        private const val VAR_BASE_NAME = "v"
 
         private val SIGNATURES = hashMapOf(
             0x10 to listOf(ArgType.INT, ArgType.INT, ArgType.INT),
@@ -382,7 +383,7 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
         val id = next().toInt()
         if (id >= headers.size)
             throw DecompileError("Local call references non-existent event", position)
-        return Funcall(headers[id].name, popFunctionArgs(headers[id].arity), id)
+        return Funcall(TranslationEngine.toEnglish(headers[id].name), popFunctionArgs(headers[id].arity), id)
     }
 
     private fun popFunctionArgs(numArgs: Int): List<Expr> {
@@ -396,7 +397,7 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
     private fun decompileGlobalCall(): Funcall {
         val name = textData[nextBigEndian(Short.SIZE_BYTES)]
             ?: throw DecompileError("Global call requests out-of-bounds text", position)
-        return Funcall(name, popFunctionArgs(next().toInt()))
+        return Funcall(TranslationEngine.toEnglish(name), popFunctionArgs(next().toInt()))
     }
 
     private fun decompileShorthandAssignment(op: Opcode3DS): ExprStmt {

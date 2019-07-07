@@ -1,10 +1,7 @@
 package compiler
 
 import ast.*
-import common.Format3DS
-import common.Opcode3DS
-import common.TokenType
-import common.toOpcode3DS
+import common.*
 import java.io.File
 import java.lang.StringBuilder
 import java.nio.ByteBuffer
@@ -261,7 +258,7 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
             }
             else -> {
                 result.add(Opcode3DS.GLOBAL_CALL)
-                result.addBigEndian(tryAddText(expr.target), Short.SIZE_BYTES)
+                result.addBigEndian(tryAddText(TranslationEngine.toJapanese(expr.target)), Short.SIZE_BYTES)
                 result.add(expr.args.size)
             }
         }
@@ -311,7 +308,7 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
     override fun visitFuncDecl(stmt: FuncDecl) {
         val subheader = mutableListOf<Byte>()
         if (stmt.symbol.name.contains("::"))
-            subheader.addString(stmt.symbol.name)
+            subheader.addString(TranslationEngine.toJapanese(stmt.symbol.name))
         writeEventContents(stmt, subheader)
     }
 
