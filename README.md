@@ -1,13 +1,13 @@
 # Exalt
 
-Exalt is a WIP script editor for the CMB format used in most of the recent Fire Emblem games. At the moment, the project has two major components: the decompiler and the compiler.
+Exalt is a WIP script com.thane98.editor for the CMB format used in most of the recent Fire Emblem games. At the moment, the project has two major components: the com.thane98.decompiler and the com.thane98.compiler.
 
-The decompiler converts CMB files into Exalt scripts. The compiler converts Exalt scripts to CMB files. For more information on using the decompiler and compiler as well as the Exalt scripting language, read on.
+The com.thane98.decompiler converts CMB files into Exalt scripts. The com.thane98.compiler converts Exalt scripts to CMB files. For more information on using the com.thane98.decompiler and com.thane98.compiler as well as the Exalt scripting language, read on.
 
 ## Installation and Usage
 Before installing Exalt, install the latest version of Java for your operating system. Then, download the latest version of Exalt from this repository's releases section.
 
-The release should come with three JAR files: "exc.jar", the compiler, "exd.jar", the decompiler. Both of these programs are command-line based, so you will need to run them through either a terminal or (for Windows users) command prompt or powershell.
+The release should come with three JAR files: "exc.jar", the com.thane98.compiler, "exd.jar", the com.thane98.decompiler. Both of these programs are command-line based, so you will need to run them through either a terminal or (for Windows users) command prompt or powershell.
 
 ### Decompiling
 To decompile a CMB, navigate to the directory of "exd.jar" in your terminal. Next, find the path of the CMB you want to decompile. To decompile this CMB, run the following command:
@@ -16,7 +16,7 @@ To decompile a CMB, navigate to the directory of "exd.jar" in your terminal. Nex
 java -jar exd.jar YOUR_PATH_HERE
 ```
 
-This will produce a script file with the name "a.exl". You can edit this file using a standard text editor.
+This will produce a script file with the name "a.exl". You can edit this file using a standard text com.thane98.editor.
 
 If you want to change the name of the output file, use the "-o" or "--output" flags. For example:
 
@@ -37,7 +37,7 @@ java -jar exc.jar YOUR_PATH_HERE
 
 This will output a CMB file to "a.cmb" by default. Once again, the "-o" or "--output" flags can be used to change the name of the output.
 
-If there are errors in your script, the decompiler will print out an error message. The message will include the file where the error occurred, the error message, and the location. For example:
+If there are errors in your script, the com.thane98.decompiler will print out an error message. The message will include the file where the error occurred, the error message, and the location. For example:
 
 ```
 /home/thane98/a.exl
@@ -90,7 +90,7 @@ func example() {
 }
 ```
 
-While the decompiler used array syntax for simplicity, there are other ways to define variables. For example, you can use the "let" syntax to create an alias for an index:
+While the com.thane98.decompiler used array syntax for simplicity, there are other ways to define variables. For example, you can use the "let" syntax to create an alias for an index:
 
 ```
 func example() {
@@ -111,7 +111,7 @@ func example() {
 }
 ```
 
-When you declare variables using this syntax, the compiler will place them in an index automatically.
+When you declare variables using this syntax, the com.thane98.compiler will place them in an index automatically.
 
 ### Arrays
 Exalt also provides limited support for arrays (separate from the array syntax mentioned in the previous section). The syntax for accessing arrays is similar to C. Here are some examples:
@@ -220,7 +220,7 @@ func diff(a, b) {
 }
 ```
 
-The compiler sees:
+The com.thane98.compiler sees:
 
 ```
 # In a.exl
@@ -236,4 +236,4 @@ func diff(a, b) {
 Exalt will check if a file has already been included before adding it to the current script. If the file was included previously, it will ignore the include directive.
 
 ## Compatibility
-At the moment, Exalt's compatibility is somewhat limited. The vast majority of scripts FE14's base game are fully compatible. Most scripts from FE13 and FE15 also work. Scripts from DLC maps vary since they use special functionality that the decompiler doesn't recognize yet. 
+At the moment, Exalt's compatibility is somewhat limited. The vast majority of scripts FE14's base game are fully compatible. Most scripts from FE13 and FE15 also work. Scripts from DLC maps vary since they use special functionality that the com.thane98.decompiler doesn't recognize yet. 

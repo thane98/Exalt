@@ -13,7 +13,7 @@ targetCompatibility = 1.8
 
 jar {
     manifest {
-        attributes "Main-Class": "editor.MainKt"
+        attributes "Main-Class": "com.thane98.editor.MainKt"
     }
 
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -23,7 +23,7 @@ task editor(type: Jar) {
     manifest {
         attributes 'Implementation-Title': 'Exalt GUI',
                 'Implementation-Version': version,
-                'Main-Class': 'editor.Main'
+                'Main-Class': 'com.thane98.editor.Main'
     }
     archiveName = "Exalt.jar"
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -31,12 +31,12 @@ task editor(type: Jar) {
 }
 
 task exc(type: Jar) {
-    exclude "decompiler/**"
-    exclude "editor/**"
+    exclude "com.thane98.decompiler/**"
+    exclude "com.thane98.editor/**"
     manifest {
         attributes 'Implementation-Title': 'Exalt Compiler CLI',
                 'Implementation-Version': version,
-                'Main-Class': 'cli.CompilerCLIKt'
+                'Main-Class': 'com.thane98.cli.CompilerCLIKt'
     }
     archiveName = "exc.jar"
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -44,12 +44,12 @@ task exc(type: Jar) {
 }
 
 task exd(type: Jar) {
-    exclude "compiler/**"
-    exclude "editor/**"
+    exclude "com.thane98.compiler/**"
+    exclude "com.thane98.editor/**"
     manifest {
         attributes 'Implementation-Title': 'Exalt Decompiler CLI',
                 'Implementation-Version': version,
-                'Main-Class': 'cli.DecompilerCLIKt'
+                'Main-Class': 'com.thane98.cli.DecompilerCLIKt'
     }
     archiveName = "exd.jar"
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -75,4 +75,4 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-mainClassName = 'editor.Main'
+mainClassName = 'com.thane98.editor.Main'
