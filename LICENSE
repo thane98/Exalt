@@ -128,7 +128,7 @@ Major Component, or to implement a Standard Interface for which an
 implementation is available to the public in source code form.  A
 "Major Component", in this context, means a major essential component
 (kernel, window system, and so on) of the specific operating system
-(if any) on which the executable work runs, or a com.thane98.compiler used to
+(if any) on which the executable work runs, or a compiler used to
 produce the work, or an object code interpreter used to run it.
 
   The "Corresponding Source" for a work in object code form means all
@@ -300,7 +300,7 @@ or household purposes, or (2) anything designed or sold for incorporation
 into a dwelling.  In determining whether a product is a consumer product,
 doubtful cases shall be resolved in favor of coverage.  For a particular
 product received by a particular user, "normally used" refers to a
-typical or com.thane98.common use of that class of product, regardless of the status
+typical or common use of that class of product, regardless of the status
 of the particular user or of the way in which the particular user
 actually uses, or expects or is expected to use, the product.  A product
 is a consumer product regardless of whether the product has substantial
