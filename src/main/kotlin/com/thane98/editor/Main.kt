@@ -5,6 +5,7 @@ import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.stage.Stage
+import jfxtras.styles.jmetro8.JMetro
 
 class Main : Application() {
     private lateinit var controller: MainWindowController
@@ -14,7 +15,6 @@ class Main : Application() {
         val parent: Parent = loader.load()
         val scene = Scene(parent)
         controller = loader.getController() as MainWindowController
-        loadStylesheets(scene)
         stage.scene = scene
         stage.title = "Exalt"
         stage.show()
@@ -22,10 +22,6 @@ class Main : Application() {
 
     override fun stop() {
         controller.saveAndCloseTabs()
-    }
-
-    private fun loadStylesheets(scene: Scene) {
-        scene.stylesheets.add(this.javaClass.getResource("styles.css").toExternalForm())
     }
 
     companion object {

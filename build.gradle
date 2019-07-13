@@ -66,6 +66,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compile group: 'com.xenomachina', name: 'kotlin-argparser', version: '2.0.7'
     compile group: 'org.fxmisc.richtext', name: 'richtextfx', version: '0.10.1'
+    compile 'org.jfxtras:jmetro:5.5'
 }
 
 compileKotlin {

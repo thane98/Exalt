@@ -16,8 +16,13 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.CheckMenuItem?>
-<VBox prefHeight="400.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1"
+<?import javafx.scene.control.RadioMenuItem?>
+<?import javafx.scene.control.ToggleGroup?>
+<VBox fx:id="root" prefHeight="400.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.thane98.editor.MainWindowController">
+    <fx:define>
+        <ToggleGroup fx:id="themeGroup" />
+    </fx:define>
     <MenuBar VBox.vgrow="NEVER">
         <Menu mnemonicParsing="false" text="File">
             <MenuItem mnemonicParsing="false" text="New" onAction="#newFile"/>
@@ -42,9 +47,20 @@
             <SeparatorMenuItem mnemonicParsing="false"/>
             <MenuItem mnemonicParsing="false" text="Select All" onAction="#selectAll"/>
             <MenuItem mnemonicParsing="false" text="Unselect All" onAction="#unselectAll"/>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="Compile" onAction="#compileFile" />
+        </Menu>
+        <Menu text="View">
+            <CheckMenuItem fx:id="showToolBarItem" text="Show Tool Bar" />
+            <CheckMenuItem fx:id="showStatusBarItem" text="Show Status Bar" />
+            <CheckMenuItem fx:id="showConsoleItem" text="Show Console" />
+            <Menu text="Theme">
+                <RadioMenuItem text="Light" toggleGroup="$themeGroup"/>
+                <RadioMenuItem text="Dark" toggleGroup="$themeGroup"/>
+            </Menu>
         </Menu>
     </MenuBar>
-    <ToolBar prefHeight="40.0" prefWidth="200.0">
+    <ToolBar fx:id="toolBar" prefHeight="40.0" prefWidth="200.0">
         <Button mnemonicParsing="false" onAction="#newFile" text="New">
         </Button>
         <Button layoutX="10.0" layoutY="11.0" mnemonicParsing="false" onAction="#openFile" text="Open">
@@ -60,7 +76,7 @@
     <StackPane VBox.vgrow="ALWAYS">
         <TabPane fx:id="scriptsPane" onDragDropped="#onDragDropped" onDragOver="#onDragOver" prefHeight="200.0"
                  prefWidth="200.0" tabClosingPolicy="ALL_TABS"/>
-        <TextArea id="console" fx:id="console" editable="false" visible="false" StackPane.alignment="BOTTOM_CENTER">
+        <TextArea id="console" fx:id="console" editable="false" StackPane.alignment="BOTTOM_CENTER">
             <contextMenu>
                 <ContextMenu>
                     <items>
@@ -71,7 +87,7 @@
             </contextMenu>
         </TextArea>
     </StackPane>
-    <ToolBar nodeOrientation="RIGHT_TO_LEFT">
+    <ToolBar fx:id="statusBar" nodeOrientation="RIGHT_TO_LEFT">
         <Button onAction="#toggleConsole" text="Toggle Console">
         </Button>
         <Pane fx:id="statusBarSpacer" minWidth="-Infinity" prefHeight="0.0" prefWidth="200.0"/>

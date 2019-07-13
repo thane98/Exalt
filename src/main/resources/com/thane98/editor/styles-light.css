@@ -2,12 +2,6 @@
     -fx-font-size: 11pt;
 }
 
-#console:focused {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5, 4, 3;
-}
-
 .progress-bar .bar {
     -fx-background-color: red;
     -fx-background-insets: 0, 1, 2;
@@ -30,19 +24,19 @@
     -fx-font-size: 12pt;
 }
 
-.keyword {
+.styled-text-area .keyword {
     -fx-fill: purple;
     -fx-font-weight: bold;
 }
 
-.string {
-    -fx-fill: mediumslateblue;
+.styled-text-area .string {
+    -fx-fill: blue;
 }
 
-.comment {
+.styled-text-area .comment {
 	-fx-fill: green;
 }
 
-.frame-ref {
+.styled-text-area .frame-ref {
     -fx-fill: #ff6d12;
 }

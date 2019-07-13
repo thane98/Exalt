@@ -9,11 +9,9 @@ import javafx.fxml.Initializable
 import javafx.scene.control.*
 import javafx.scene.input.DragEvent
 import javafx.scene.input.TransferMode
-import javafx.scene.layout.HBox
-import javafx.scene.layout.Pane
-import javafx.scene.layout.Priority
-import javafx.scene.layout.Region
+import javafx.scene.layout.*
 import javafx.stage.FileChooser
+import jfxtras.styles.jmetro8.JMetro
 import java.io.File
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -22,6 +20,8 @@ import java.util.*
 
 
 class MainWindowController : Initializable {
+    @FXML
+    private lateinit var root: VBox
     @FXML
     private lateinit var scriptsPane: TabPane
     @FXML
@@ -43,11 +43,23 @@ class MainWindowController : Initializable {
     @FXML
     private lateinit var compileToolBarItem: Button
     @FXML
+    private lateinit var showToolBarItem: CheckMenuItem
+    @FXML
+    private lateinit var showStatusBarItem: CheckMenuItem
+    @FXML
+    private lateinit var showConsoleItem: CheckMenuItem
+    @FXML
     private lateinit var console: TextArea
     @FXML
     private lateinit var compileLabel: Label
     @FXML
     private lateinit var progressBar: ProgressBar
+    @FXML
+    private lateinit var toolBar: ToolBar
+    @FXML
+    private lateinit var statusBar: ToolBar
+    @FXML
+    private lateinit var themeGroup: ToggleGroup
 
     private var nextUntitled = 0
     private val config = Config()
@@ -58,16 +70,33 @@ class MainWindowController : Initializable {
 
 
     override fun initialize(location: URL?, resources: ResourceBundle?) {
+        // Pull theme selection from config
+        when (config.theme.value) {
+            "Light" -> themeGroup.selectToggle(themeGroup.toggles[0])
+            "Dark" -> themeGroup.selectToggle(themeGroup.toggles[1])
+        }
+
         // Configure resizing for console and spacers.
         HBox.setHgrow(toolBarSpacer, Priority.ALWAYS)
         HBox.setHgrow(statusBarSpacer, Priority.ALWAYS)
         console.setMaxSize(Region.USE_COMPUTED_SIZE, Region.USE_PREF_SIZE)
-
         scriptsPane.tabs.addListener { _: Observable -> toggleActions() }
-        experimentalModeItem.isSelected = config.experimentalMode.value
-        config.experimentalMode.bind(experimentalModeItem.selectedProperty())
+        themeGroup.selectedToggleProperty().addListener { _: Observable -> updateTheme() }
+        createConfigPropertyBindings()
         toggleActions()
         setupFileDialogs()
+        updateTheme()
+    }
+
+    private fun createConfigPropertyBindings() {
+        experimentalModeItem.selectedProperty().bindBidirectional(config.experimentalMode)
+        showToolBarItem.selectedProperty().bindBidirectional(config.showToolBar)
+        showStatusBarItem.selectedProperty().bindBidirectional(config.showStatusBar)
+        showConsoleItem.selectedProperty().bindBidirectional(config.showConsole)
+
+        toolBar.visibleProperty().bindBidirectional(config.showToolBar)
+        statusBar.visibleProperty().bindBidirectional(config.showStatusBar)
+        console.visibleProperty().bindBidirectional(config.showConsole)
     }
 
     private fun setupFileDialogs() {
@@ -100,6 +129,23 @@ class MainWindowController : Initializable {
         compileToolBarItem.isDisable = noEditorsOpen
         for (item in editMenu.items)
             item.isDisable = noEditorsOpen
+    }
+
+    @FXML
+    private fun updateTheme() {
+        val selectedThemeItem = themeGroup.selectedToggle as RadioMenuItem
+        config.theme.value = selectedThemeItem.text
+        root.stylesheets.clear()
+        when (selectedThemeItem.text) {
+            "Light" -> {
+                JMetro(JMetro.Style.LIGHT).applyTheme(root)
+                root.stylesheets.add(this.javaClass.getResource("styles-light.css").toExternalForm())
+            }
+            "Dark" -> {
+                JMetro(JMetro.Style.DARK).applyTheme(root)
+                root.stylesheets.add(this.javaClass.getResource("styles-dark.css").toExternalForm())
+            }
+        }
     }
 
     @FXML

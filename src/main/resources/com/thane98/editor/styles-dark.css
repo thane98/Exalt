@@ -1,0 +1,55 @@
+.root {
+    -fx-font-size: 11pt;
+}
+
+.progress-bar .bar {
+    -fx-background-color: red;
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0.416667em; /* 5 */
+}
+
+#failure-bar .bar {
+    -fx-background-color: maroon;
+}
+
+#success-bar .bar {
+    -fx-background-color: green;
+}
+
+.caret {
+    -fx-fill: white;
+    -fx-stroke: white;
+}
+
+.styled-text-area {
+    -fx-font-size: 12pt;
+    -fx-background-color: #252525;
+    -fx-highlight-fill: red;
+    -fx-highlight-text-fill: red;
+}
+
+.styled-text-area .text {
+    -fx-fill: white;
+}
+
+.lineno {
+    -fx-font-size: 12pt;
+    -fx-background-color: black;
+}
+
+.styled-text-area .keyword {
+    -fx-fill: #c678dd;
+    -fx-font-weight: bold;
+}
+
+.styled-text-area .string {
+    -fx-fill: #e5c07b;
+}
+
+.styled-text-area .comment {
+	-fx-fill: #98c379;
+}
+
+.styled-text-area .frame-ref {
+    -fx-fill: #61afef;
+}
