@@ -14,6 +14,7 @@ class Main : Application() {
         val loader = FXMLLoader(this.javaClass.getResource("MainWindow.fxml"))
         val parent: Parent = loader.load()
         val scene = Scene(parent)
+        scene.stylesheets.add(this.javaClass.getResource("styles-common.css").toExternalForm())
         controller = loader.getController() as MainWindowController
         stage.scene = scene
         stage.title = "Exalt"

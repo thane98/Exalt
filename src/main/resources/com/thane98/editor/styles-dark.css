@@ -1,19 +1,5 @@
-.root {
-    -fx-font-size: 11pt;
-}
-
-.progress-bar .bar {
-    -fx-background-color: red;
-    -fx-background-insets: 0, 1, 2;
-    -fx-padding: 0.416667em; /* 5 */
-}
-
-#failure-bar .bar {
-    -fx-background-color: maroon;
-}
-
-#success-bar .bar {
-    -fx-background-color: green;
+.split-pane > .split-pane-divider {
+    -fx-background-color: #666;
 }
 
 .caret {
@@ -24,8 +10,6 @@
 .styled-text-area {
     -fx-font-size: 12pt;
     -fx-background-color: #252525;
-    -fx-highlight-fill: red;
-    -fx-highlight-text-fill: red;
 }
 
 .styled-text-area .text {

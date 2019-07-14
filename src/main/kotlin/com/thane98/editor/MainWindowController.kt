@@ -18,7 +18,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.*
 
-
 class MainWindowController : Initializable {
     @FXML
     private lateinit var root: VBox
@@ -60,6 +59,10 @@ class MainWindowController : Initializable {
     private lateinit var statusBar: ToolBar
     @FXML
     private lateinit var themeGroup: ToggleGroup
+    @FXML
+    private lateinit var consoleContainer: VBox
+    @FXML
+    private lateinit var mainSplitPane: SplitPane
 
     private var nextUntitled = 0
     private val config = Config()
@@ -79,9 +82,9 @@ class MainWindowController : Initializable {
         // Configure resizing for console and spacers.
         HBox.setHgrow(toolBarSpacer, Priority.ALWAYS)
         HBox.setHgrow(statusBarSpacer, Priority.ALWAYS)
-        console.setMaxSize(Region.USE_COMPUTED_SIZE, Region.USE_PREF_SIZE)
         scriptsPane.tabs.addListener { _: Observable -> toggleActions() }
         themeGroup.selectedToggleProperty().addListener { _: Observable -> updateTheme() }
+
         createConfigPropertyBindings()
         toggleActions()
         setupFileDialogs()
@@ -98,7 +101,12 @@ class MainWindowController : Initializable {
         toolBar.managedProperty().bind(config.showToolBar)
         statusBar.visibleProperty().bindBidirectional(config.showStatusBar)
         statusBar.managedProperty().bind(config.showStatusBar)
-        console.visibleProperty().bindBidirectional(config.showConsole)
+        consoleContainer.visibleProperty().addListener { _: Observable ->
+            if (consoleContainer.isVisible)
+                mainSplitPane.items.add(consoleContainer)
+            else
+                mainSplitPane.items.remove(consoleContainer)
+        }
     }
 
     private fun setupFileDialogs() {
@@ -242,7 +250,7 @@ class MainWindowController : Initializable {
                         compileLabel.isVisible = true
                         if (result.log.hasErrors()) {
                             console.appendText(result.log.dump())
-                            console.isVisible = true
+                            consoleContainer.isVisible = true
                             compileLabel.text = "Build failed."
                             progressBar.id = "failure-bar"
                         } else {
@@ -283,7 +291,7 @@ class MainWindowController : Initializable {
 
     @FXML
     private fun toggleConsole() {
-        console.isVisible = !console.isVisible
+        consoleContainer.isVisible = !consoleContainer.isVisible
     }
 
     @FXML

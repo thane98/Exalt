@@ -18,6 +18,11 @@
 <?import javafx.scene.control.CheckMenuItem?>
 <?import javafx.scene.control.RadioMenuItem?>
 <?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import org.controlsfx.glyphfont.Glyph?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.geometry.Insets?>
 <VBox fx:id="root" prefHeight="400.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.thane98.editor.MainWindowController">
     <fx:define>
@@ -73,22 +78,34 @@
                 onAction="#compileFile" text="Compile">
         </Button>
     </ToolBar>
-    <StackPane VBox.vgrow="ALWAYS">
+    <SplitPane fx:id="mainSplitPane" VBox.vgrow="ALWAYS" orientation="VERTICAL">
         <TabPane fx:id="scriptsPane" onDragDropped="#onDragDropped" onDragOver="#onDragOver" prefHeight="200.0"
                  prefWidth="200.0" tabClosingPolicy="ALL_TABS"/>
-        <TextArea id="console" fx:id="console" editable="false" StackPane.alignment="BOTTOM_CENTER">
-            <contextMenu>
-                <ContextMenu>
-                    <items>
-                        <MenuItem mnemonicParsing="false" text="Copy Text" onAction="#copyConsole" />
-                        <MenuItem mnemonicParsing="false" text="Clear" onAction="#clearConsole" />
-                    </items>
-                </ContextMenu>
-            </contextMenu>
-        </TextArea>
-    </StackPane>
-    <ToolBar fx:id="statusBar" nodeOrientation="RIGHT_TO_LEFT">
-        <Button onAction="#toggleConsole" text="Toggle Console">
+        <VBox fx:id="consoleContainer">
+            <HBox prefHeight="20" VBox.vgrow="NEVER" nodeOrientation="RIGHT_TO_LEFT">
+                <Button maxHeight="20" minHeight="20" onAction="#toggleConsole">
+                    <graphic>
+                        <Glyph fontFamily="FontAwesome" icon="CARET_DOWN" />
+                    </graphic>
+                </Button>
+            </HBox>
+            <TextArea id="console" fx:id="console" editable="false" VBox.vgrow="ALWAYS">
+                <contextMenu>
+                    <ContextMenu>
+                        <items>
+                            <MenuItem mnemonicParsing="false" text="Copy Text" onAction="#copyConsole" />
+                            <MenuItem mnemonicParsing="false" text="Clear" onAction="#clearConsole" />
+                        </items>
+                    </ContextMenu>
+                </contextMenu>
+            </TextArea>
+        </VBox>
+    </SplitPane>
+    <ToolBar fx:id="statusBar">
+        <Button text="Console" onAction="#toggleConsole">
+            <graphic>
+                <Glyph fontFamily="FontAwesome" icon="Terminal" />
+            </graphic>
         </Button>
         <Pane fx:id="statusBarSpacer" minWidth="-Infinity" prefHeight="0.0" prefWidth="200.0"/>
         <Label fx:id="compileLabel" visible="false" />
