@@ -37,3 +37,7 @@
 .styled-text-area .frame-ref {
     -fx-fill: #61afef;
 }
+
+.styled-text-area .error {
+    -rtfx-background-color: red;
+}

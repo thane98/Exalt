@@ -99,7 +99,7 @@ class Lexer(
             linePos = 0
             line++
         }
-        tokens.add(Token(TokenType.EOF, SourcePosition(srcPath, -1, -1)))
+        tokens.add(Token(TokenType.EOF, SourcePosition(srcPath, -1, -1, 0)))
         return tokens
     }
 
@@ -265,7 +265,7 @@ class Lexer(
     }
 
     private fun position(): SourcePosition {
-        return SourcePosition(srcPath, line + 1, start)
+        return SourcePosition(srcPath, line + 1, start, linePos - start)
     }
 
     private fun peek(lookahead: Int = 0): Char {

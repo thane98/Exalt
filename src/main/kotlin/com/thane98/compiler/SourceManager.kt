@@ -54,7 +54,7 @@ class SourceManager {
         }
         throw CompileError(
             "File $pathString is not a valid source file.",
-            SourcePosition(null, -1, -1)
+            SourcePosition(null, -1, -1, 0)
         )
     }
 }

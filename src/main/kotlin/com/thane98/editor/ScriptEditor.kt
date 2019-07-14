@@ -51,7 +51,7 @@ class ScriptEditor(title: String) : Tab(title) {
     var destFile: File? = null
     val codeArea = CodeArea()
 
-    constructor(sourceFile: File, experimental: Boolean = false): this(sourceFile.name) {
+    constructor(sourceFile: File, experimental: Boolean = false) : this(sourceFile.name) {
         this.sourceFile = sourceFile
         if (sourceFile.path.endsWith(".cmb"))
             destFile = sourceFile
@@ -62,7 +62,7 @@ class ScriptEditor(title: String) : Tab(title) {
         content = VirtualizedScrollPane(codeArea)
         codeArea.paragraphGraphicFactory = LineNumberFactory.get(codeArea)
         subscription = codeArea.multiPlainChanges()
-            .successionEnds(Duration.ofMillis(200))
+            .successionEnds(Duration.ofMillis(400))
             .supplyTask(this::computeHighlightingAsync)
             .awaitLatest(codeArea.multiPlainChanges())
             .filterMap { t ->

@@ -14,10 +14,15 @@ class CompileResult {
     }
 }
 
-fun compileFromInMemoryScript(source: String, dest: String): CompileResult {
+fun parseFromInMemoryScript(source: String): CompileResult {
     val result = CompileResult()
     result.sources.addInMemorySource(source)
     performParse(result, SourceManager.IN_MEMORY_SOURCE_PATH)
+    return result
+}
+
+fun compileFromInMemoryScript(source: String, dest: String): CompileResult {
+    val result = parseFromInMemoryScript(source)
     generateAndWriteCmb(result.parseTree!!, dest)
     return result
 }

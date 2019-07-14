@@ -5,6 +5,10 @@ import java.lang.StringBuilder
 class Log(private val sourceManager: SourceManager) {
     private val errors = mutableListOf<CompileError>()
 
+    fun errors(): List<CompileError> {
+        return errors
+    }
+
     fun hasErrors(): Boolean {
         return errors.isNotEmpty()
     }
