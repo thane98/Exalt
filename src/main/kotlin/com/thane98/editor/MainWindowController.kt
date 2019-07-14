@@ -95,7 +95,9 @@ class MainWindowController : Initializable {
         showConsoleItem.selectedProperty().bindBidirectional(config.showConsole)
 
         toolBar.visibleProperty().bindBidirectional(config.showToolBar)
+        toolBar.managedProperty().bind(config.showToolBar)
         statusBar.visibleProperty().bindBidirectional(config.showStatusBar)
+        statusBar.managedProperty().bind(config.showStatusBar)
         console.visibleProperty().bindBidirectional(config.showConsole)
     }
 
