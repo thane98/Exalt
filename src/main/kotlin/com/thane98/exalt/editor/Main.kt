@@ -15,6 +15,7 @@ class Main : Application() {
         val scene = Scene(parent)
         scene.stylesheets.add(this.javaClass.getResource("styles-common.css").toExternalForm())
         controller = loader.getController() as MainWindowController
+        scene.setOnKeyPressed { keyEvent -> controller.handleCancel(keyEvent) }
         stage.scene = scene
         stage.title = "Exalt"
         stage.show()

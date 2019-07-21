@@ -3,19 +3,20 @@ package com.thane98.exalt.editor
 import com.thane98.exalt.decompiler.decompile
 import javafx.application.Platform
 import javafx.concurrent.Task
-import javafx.fxml.FXMLLoader
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.control.Button
+import javafx.scene.control.Separator
 import javafx.scene.control.Tab
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.HBox
+import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
-import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
+import org.controlsfx.glyphfont.Glyph
 import org.fxmisc.flowless.VirtualizedScrollPane
 import org.fxmisc.richtext.CodeArea
 import org.fxmisc.richtext.LineNumberFactory
@@ -29,7 +30,6 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
-
 
 class ScriptEditor(title: String) : Tab(title) {
     companion object {
@@ -60,6 +60,7 @@ class ScriptEditor(title: String) : Tab(title) {
     var sourceFile: File? = null
     var destFile: File? = null
     val codeArea = CodeArea()
+    lateinit var findReplaceBar: HBox
 
     constructor(sourceFile: File, experimental: Boolean = false) : this(sourceFile.name) {
         this.sourceFile = sourceFile
@@ -110,44 +111,63 @@ class ScriptEditor(title: String) : Tab(title) {
 
     private fun createEditorContent(): Node {
         val root = VBox()
-        val finder = createFindReplaceBar()
+        findReplaceBar = createFindReplaceBar()
+        val findSeparator = Separator()
         val editor = VirtualizedScrollPane(codeArea)
         root.setMinSize(0.0, 0.0)
-        root.children.add(finder)
+        root.children.add(findReplaceBar)
+        root.children.add(findSeparator)
         root.children.add(editor)
         VBox.setVgrow(editor, Priority.ALWAYS)
+        findReplaceBar.managedProperty().bind(findReplaceBar.visibleProperty())
+        findReplaceBar.isVisible = false
+        findSeparator.managedProperty().bind(findReplaceBar.visibleProperty())
+        findSeparator.visibleProperty().bind(findReplaceBar.visibleProperty())
         return root
     }
 
-    private fun createFindReplaceBar(): Node {
+    private fun createFindReplaceBar(): HBox {
         val bar = HBox()
         bar.alignment = Pos.CENTER_LEFT
         bar.spacing = 5.0
         bar.padding = Insets(5.0, 5.0, 5.0, 5.0)
+
         val findField = TextField()
         findField.promptText = "Find..."
+        findField.setOnAction { findNext(findField.text) }
         val replaceField = TextField()
         replaceField.promptText = "Replace With..."
+        replaceField.setOnAction { replaceNext(findField.text, replaceField.text) }
         val findButton = Button("Find")
-        findButton.setOnAction {
-            val selectIndex = findText(findField.text)
-            if (selectIndex != -1)
-                codeArea.selectRange(selectIndex, selectIndex + findField.text.length)
-        }
+        findButton.setOnAction { findNext(findField.text) }
         val replaceButton = Button("Replace")
-        replaceButton.setOnAction {
-            val targetIndex = findText(findField.text)
-            if (targetIndex != -1)
-                codeArea.replaceText(targetIndex, targetIndex + findField.text.length, replaceField.text)
-        }
+        replaceButton.setOnAction { replaceNext(findField.text, replaceField.text) }
         val replaceAllButton = Button("Replace All")
         replaceAllButton.setOnAction {
             if (findField.text != null && replaceField.text != null) {
                 codeArea.replaceText(codeArea.text.replace(findField.text, replaceField.text))
             }
         }
-        bar.children.addAll(findField, replaceField, findButton, replaceButton, replaceAllButton)
+
+        val spacer = Pane()
+        val closeButton = Button("", Glyph("FontAwesome", "Close"))
+        closeButton.setOnAction { bar.isVisible = false }
+        bar.children.addAll(findField, replaceField, findButton, replaceButton, replaceAllButton, spacer, closeButton)
+        HBox.setHgrow(spacer, Priority.ALWAYS)
         return bar
+    }
+
+    private fun findNext(target: String) {
+        val selectIndex = findText(target)
+        if (selectIndex != -1) {
+            codeArea.selectRange(selectIndex, selectIndex + target.length)
+        }
+    }
+
+    private fun replaceNext(target: String, replacement: String) {
+        val targetIndex = findText(target)
+        if (targetIndex != -1)
+            codeArea.replaceText(targetIndex, targetIndex + target.length, replacement)
     }
 
     private fun findText(target: String): Int {
@@ -168,11 +188,6 @@ class ScriptEditor(title: String) : Tab(title) {
             decompile(file.path, experimental)
         else
             String(Files.readAllBytes(Paths.get(file.path)))
-    }
-
-    fun stopProcessing() {
-        subscription.unsubscribe()
-        executor.shutdown()
     }
 
     private fun computeHighlightingAsync(): Task<StyleSpans<Collection<String>>> {
@@ -208,5 +223,10 @@ class ScriptEditor(title: String) : Tab(title) {
         }
         spansBuilder.add(Collections.emptyList(), text.length - lastKwEnd)
         return spansBuilder.create()
+    }
+
+    fun stopProcessing() {
+        subscription.unsubscribe()
+        executor.shutdown()
     }
 }

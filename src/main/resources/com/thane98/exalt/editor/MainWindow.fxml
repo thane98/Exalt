@@ -27,12 +27,12 @@
     </fx:define>
     <MenuBar VBox.vgrow="NEVER">
         <Menu mnemonicParsing="false" text="File">
-            <MenuItem mnemonicParsing="false" text="New" onAction="#newFile"/>
-            <MenuItem mnemonicParsing="false" onAction="#openFile" text="Open…"/>
+            <MenuItem mnemonicParsing="false" text="New" onAction="#newFile" accelerator="Shortcut+N" />
+            <MenuItem mnemonicParsing="false" onAction="#openFile" text="Open…" accelerator="Shortcut+O" />
             <SeparatorMenuItem mnemonicParsing="false"/>
             <MenuItem fx:id="closeMenuItem" disable="true" mnemonicParsing="false" text="Close" onAction="#closeFile" />
-            <MenuItem fx:id="saveMenuItem" disable="true" mnemonicParsing="false" text="Save" onAction="#saveFile" />
-            <MenuItem fx:id="saveAsMenuItem" disable="true" mnemonicParsing="false" text="Save As…" onAction="#saveFileAs"/>
+            <MenuItem fx:id="saveMenuItem" disable="true" mnemonicParsing="false" text="Save" onAction="#saveFile" accelerator="Shortcut+S"/>
+            <MenuItem fx:id="saveAsMenuItem" disable="true" mnemonicParsing="false" text="Save As…" onAction="#saveFileAs" accelerator="Shortcut+Shift+S"/>
             <SeparatorMenuItem mnemonicParsing="false"/>
             <CheckMenuItem fx:id="experimentalModeItem" mnemonicParsing="false" text="Experimental Mode" />
             <SeparatorMenuItem mnemonicParsing="false"/>
@@ -49,6 +49,9 @@
             <SeparatorMenuItem mnemonicParsing="false"/>
             <MenuItem mnemonicParsing="false" text="Select All" onAction="#selectAll"/>
             <MenuItem mnemonicParsing="false" text="Unselect All" onAction="#unselectAll"/>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="Find" onAction="#showFindReplaceBar" accelerator="Shortcut+F" />
+            <MenuItem mnemonicParsing="false" text="Replace" onAction="#showFindReplaceBar" accelerator="Shortcut+R" />
             <SeparatorMenuItem mnemonicParsing="false" />
             <MenuItem mnemonicParsing="false" text="Compile" onAction="#compileFile" />
         </Menu>

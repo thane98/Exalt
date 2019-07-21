@@ -8,8 +8,13 @@ import javafx.fxml.FXML
 import javafx.fxml.Initializable
 import javafx.scene.control.*
 import javafx.scene.input.DragEvent
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.input.TransferMode
-import javafx.scene.layout.*
+import javafx.scene.layout.HBox
+import javafx.scene.layout.Pane
+import javafx.scene.layout.Priority
+import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import jfxtras.styles.jmetro8.JMetro
 import java.io.File
@@ -303,6 +308,19 @@ class MainWindowController : Initializable {
     @FXML
     private fun clearConsole() {
         console.clear()
+    }
+
+    @FXML
+    private fun showFindReplaceBar() {
+        currentEditor().findReplaceBar.isVisible = true
+        currentEditor().findReplaceBar.children[0].requestFocus()
+    }
+
+    fun handleCancel(event: KeyEvent) {
+        if (event.code == KeyCode.ESCAPE && scriptsPane.tabs.isNotEmpty() && currentEditor().findReplaceBar.isVisible) {
+            currentEditor().findReplaceBar.isVisible = false
+            event.consume()
+        }
     }
 
     @FXML
