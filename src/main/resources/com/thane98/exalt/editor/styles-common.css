@@ -2,6 +2,12 @@
     -fx-font-size: 11pt;
 }
 
+.popover .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-font-size: 11pt;
+    -fx-padding: 0.5em 0.5em 0.5em 0.5em;
+    -fx-cell-size: 36px;
+}
+
 .split-pane {
     -fx-background-color: background_color;
     -fx-box-border: transparent;

@@ -2,20 +2,21 @@ package com.thane98.exalt.editor
 
 import com.thane98.exalt.decompiler.decompile
 import javafx.application.Platform
+import javafx.beans.binding.Bindings
 import javafx.concurrent.Task
+import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Node
-import javafx.scene.control.Button
-import javafx.scene.control.Separator
-import javafx.scene.control.Tab
-import javafx.scene.control.TextField
+import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
+import javafx.stage.Popup
+import org.controlsfx.control.PopOver
 import org.controlsfx.glyphfont.Glyph
 import org.fxmisc.flowless.VirtualizedScrollPane
 import org.fxmisc.richtext.CodeArea
@@ -57,6 +58,8 @@ class ScriptEditor(title: String) : Tab(title) {
 
     private val executor = Executors.newSingleThreadExecutor()
     private var subscription: Subscription
+    private val completionPopOver = PopOver()
+    private val completionContents = ListView<String>()
     var sourceFile: File? = null
     var destFile: File? = null
     val codeArea = CodeArea()
@@ -105,6 +108,27 @@ class ScriptEditor(title: String) : Tab(title) {
                         e.consume()
                     }
                 }
+            }
+        }
+        this.setOnClosed { stopProcessing() }
+        configureCompletionPopOver()
+    }
+
+    private fun configureCompletionPopOver() {
+        completionPopOver.contentNode = completionContents
+        completionPopOver.arrowLocation = PopOver.ArrowLocation.TOP_CENTER
+        completionContents.items.addAll("Test", "Test 2")
+        completionContents.prefHeightProperty().bind(Bindings.size(completionContents.items).multiply(36).add(2))
+        completionPopOver.scene.addEventFilter(KeyEvent.KEY_PRESSED) { keyEvent ->
+            if (keyEvent.code == KeyCode.ESCAPE) {
+                completionPopOver.hide()
+                keyEvent.consume()
+            } else if (keyEvent.code == KeyCode.ENTER) {
+                val target = getCurrentWord()
+                val replacement = completionContents.selectionModel.selectedItem
+                codeArea.replaceText(codeArea.caretPosition - target.length, codeArea.caretPosition, replacement)
+                completionPopOver.hide()
+                keyEvent.consume()
             }
         }
     }
@@ -203,6 +227,38 @@ class ScriptEditor(title: String) : Tab(title) {
 
     private fun applyHighlighting(highlighting: StyleSpans<Collection<String>>) {
         codeArea.setStyleSpans(0, highlighting)
+        var revealedPopOver = false
+        if (codeArea.caretBounds.isPresent) {
+            val currentWord = getCurrentWord()
+            if (currentWord.isNotEmpty()) {
+                populateCompletionPopOver(currentWord)
+                if (completionContents.items.isNotEmpty()) {
+                    val bounds = codeArea.caretBounds.get()
+                    revealedPopOver = true
+                    completionPopOver.show(codeArea, bounds.minX, bounds.maxY)
+                }
+            }
+        }
+        if (!revealedPopOver)
+            completionPopOver.hide()
+    }
+
+    private fun populateCompletionPopOver(prefix: String) {
+        completionContents.items.clear()
+        for (str in CompletionManager.fatesFunctions) {
+            if (str.startsWith(prefix))
+                completionContents.items.add(str)
+            if (completionContents.items.size >= 10) break
+        }
+    }
+
+    private fun getCurrentWord(): String {
+        val paragraph = codeArea.paragraphs[codeArea.currentParagraph]
+        val startIndex = codeArea.caretColumn
+        var i = startIndex - 1
+        while (i >= 0 && !paragraph.text[i].isWhitespace()) i--
+        i += 1
+        return paragraph.text.substring(i, startIndex)
     }
 
     private fun computeHighlighting(text: String): StyleSpans<Collection<String>> {
