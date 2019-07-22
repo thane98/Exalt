@@ -3,6 +3,7 @@ package com.thane98.exalt.editor
 import com.thane98.exalt.decompiler.decompile
 import javafx.application.Platform
 import javafx.beans.binding.Bindings
+import javafx.collections.ListChangeListener
 import javafx.concurrent.Task
 import javafx.event.EventHandler
 import javafx.geometry.Insets
@@ -118,7 +119,8 @@ class ScriptEditor(title: String) : Tab(title) {
         completionPopOver.contentNode = completionContents
         completionPopOver.arrowLocation = PopOver.ArrowLocation.TOP_CENTER
         completionContents.items.addAll("Test", "Test 2")
-        completionContents.prefHeightProperty().bind(Bindings.size(completionContents.items).multiply(36).add(2))
+        completionContents.prefHeightProperty()
+            .bind(Bindings.size(completionContents.items).multiply(36).add(2))
         completionPopOver.scene.addEventFilter(KeyEvent.KEY_PRESSED) { keyEvent ->
             if (keyEvent.code == KeyCode.ESCAPE) {
                 completionPopOver.hide()
@@ -185,13 +187,16 @@ class ScriptEditor(title: String) : Tab(title) {
         val selectIndex = findText(target)
         if (selectIndex != -1) {
             codeArea.selectRange(selectIndex, selectIndex + target.length)
+            codeArea.scrollYToPixel(codeArea.currentParagraph * 20.0)
         }
     }
 
     private fun replaceNext(target: String, replacement: String) {
         val targetIndex = findText(target)
-        if (targetIndex != -1)
+        if (targetIndex != -1) {
             codeArea.replaceText(targetIndex, targetIndex + target.length, replacement)
+            codeArea.scrollYToPixel(codeArea.currentParagraph * 20.0)
+        }
     }
 
     private fun findText(target: String): Int {
