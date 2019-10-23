@@ -16,41 +16,48 @@ TEST_SCRIPTS_ROOT = os.environ["TEST_SCRIPTS_ROOT"]
 if len(sys.argv) < 2:
     print("Please pass in the path of target script.")
     exit(1)
+    
+DISABLE_OUTPUT = len(sys.argv) > 2
+def output(msg = ""):
+    if not DISABLE_OUTPUT:
+        print(msg)
+    
 TARGET_NAME = sys.argv[1]
 OUT_NAME = os.path.basename(TARGET_NAME)
+SCRIPT_NAME = OUT_NAME + ".exl"
 
 TARGET_SCRIPT_PATH = TEST_SCRIPTS_ROOT + "/" + TARGET_NAME
 
-print("-----------------------------------------")
-print("Testing script " + TARGET_NAME)
-print("-----------------------------------------")
+output("-----------------------------------------")
+output("Testing script " + TARGET_NAME)
+output("-----------------------------------------")
 
-print("Decompiling target.")
-result = subprocess.call(["java", "-jar", EXD, TARGET_SCRIPT_PATH])
+output("Decompiling target.")
+result = subprocess.call(["java", "-jar", EXD, TARGET_SCRIPT_PATH, "-o", SCRIPT_NAME])
 if result != 0:
-    print("FAILURE: Unable to decompile input. Exiting...")
+    output("FAILURE: Unable to decompile input. Exiting...")
     exit(1)
     
-print("Successfully decompiled target.")
-print()
+output("Successfully decompiled target.")
+output()
 
-print("Compiling target.")
-result = subprocess.call(["java", "-jar", EXC, "a.exl", "-o", OUT_NAME])
+output("Compiling target.")
+result = subprocess.call(["java", "-jar", EXC, SCRIPT_NAME, "-o", OUT_NAME])
 if result != 0:
-    print("FAILURE: Unable to compile input. Exiting...")
+    output("FAILURE: Unable to compile input. Exiting...")
     exit(1)
     
-print("Successfully compiled target.")
-print()
+output("Successfully compiled target.")
+output()
 
-print("Performing binary comparison on input and output...")
+output("Performing binary comparison on input and output...")
 with open(TARGET_SCRIPT_PATH, "rb") as f:
     input_bin = f.read()
 with open(OUT_NAME, "rb") as f:
     output_bin = f.read()
     
 if input_bin != output_bin:
-    print("FAILURE: Input/Output do not equal!")
+    output("FAILURE: Input/Output do not equal!")
     exit(1)
-print("SUCCESS!")
+output("SUCCESS!")
     
