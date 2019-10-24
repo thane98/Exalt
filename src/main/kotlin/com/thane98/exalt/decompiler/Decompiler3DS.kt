@@ -26,7 +26,9 @@ private enum class ExprState {
     NORMAL, SHORTHAND_ASSIGNMENT
 }
 
-class Decompiler3DS private constructor(private val input: ByteArray, private val enableExperimental: Boolean) {
+class Decompiler3DS private constructor(private val input: ByteArray,
+                                        private val enableExperimental: Boolean,
+                                        private val awakeningMode: Boolean = false) {
     private var position = 0
     private val headers = mutableListOf<EventHeader>()
     private lateinit var textData: Map<Int, String>
@@ -66,19 +68,34 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
             0x20 to listOf(ArgType.STRING, ArgType.INT)
         )
 
+        // Awakening uses the same IDs as Fates with different signatures.
+        // Since Echoes and Fates share signatures, we assume scripts follow
+        // their format by default. If we get an arity mismatch using the
+        // Fates/Echoes signatures, we check the Awakening signatures.
+        private val FALLBACK_SIGNATURES = hashMapOf(
+            0xC to listOf(ArgType.INT, ArgType.INT, ArgType.INT),
+            0xF to listOf(ArgType.INT, ArgType.INT),
+            0x10 to listOf(ArgType.INT, ArgType.INT, ArgType.INT, ArgType.INT, ArgType.INT, ArgType.STRING),
+            0x11 to listOf(ArgType.INT, ArgType.INT, ArgType.INT, ArgType.INT, ArgType.STRING),
+            0x13 to listOf(ArgType.STRING, ArgType.STRING, ArgType.INT, ArgType.STRING),
+            0x15 to listOf(ArgType.STRING, ArgType.INT, ArgType.STRING)
+        )
+
+
         private val SHORTHAND_TOKEN_TYPES = hashMapOf(
             Opcode3DS.PLUS to TokenType.ASSIGN_PLUS,
             Opcode3DS.MINUS to TokenType.ASSIGN_MINUS,
             Opcode3DS.TIMES to TokenType.ASSIGN_TIMES,
             Opcode3DS.DIVIDE to TokenType.ASSIGN_DIVIDE,
+            Opcode3DS.MODULO to TokenType.ASSIGN_MODULO,
             Opcode3DS.FPLUS to TokenType.ASSIGN_FPLUS,
             Opcode3DS.FMINUS to TokenType.ASSIGN_FMINUS,
             Opcode3DS.FTIMES to TokenType.ASSIGN_FMINUS,
             Opcode3DS.FDIVIDE to TokenType.ASSIGN_FDIVIDE
         )
 
-        fun decompile(input: ByteArray, enableExperimental: Boolean): Block {
-            val decompiler = Decompiler3DS(input, enableExperimental)
+        fun decompile(input: ByteArray, enableExperimental: Boolean, awakeningMode: Boolean): Block {
+            val decompiler = Decompiler3DS(input, enableExperimental, awakeningMode)
             return decompiler.decompile()
         }
     }
@@ -169,28 +186,48 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
         if (type == 0)
             return result
 
-        val signature = SIGNATURES[type]
-        val unrecognized = arity > 0 && (signature == null || arity != signature.size)
-        if (unrecognized)
+        val signature = getEventSignature(type, arity)
+        if (signature == null && arity > 0)
             println("Warning: unrecognized event type: $type. Event arguments may be incorrect!")
         for (i in 0 until arity) {
             val value = nextInt()
-            if (unrecognized) {
-                if (value in textData)
-                    result.add(Literal(textData[value] ?: error("String argument isn't in text data")))
-                else
-                    result.add(Literal(value))
-            } else {
-                when (signature!![i]) {
-                    ArgType.INT -> result.add(Literal(value))
-                    ArgType.STRING -> {
-                        val str = textData[value] ?: error("String argument isn't in text data")
-                        result.add(Literal(str))
-                    }
-                }
-            }
+            if (signature == null)
+                result.add(readArgByGuessing(value))
+            else
+                result.add(readArgFromSignature(value, i, type, signature))
         }
         return result
+    }
+
+    private fun getEventSignature(type: Int, arity: Int): List<ArgType>? {
+        if (!awakeningMode) {
+            val defaultSignature = SIGNATURES[type]
+            if (defaultSignature != null && arity == defaultSignature.size)
+                return defaultSignature
+        }
+
+        val fallbackSignature = FALLBACK_SIGNATURES[type]
+        if (fallbackSignature == null || arity != fallbackSignature.size)
+            return null
+        return fallbackSignature
+    }
+
+    private fun readArgByGuessing(value: Int): Literal {
+        return if (value in textData)
+            Literal(textData.getValue(value))
+        else
+            Literal(value)
+    }
+
+    private fun readArgFromSignature(value: Int, argNumber: Int, type: Int, signature: List<ArgType>): Literal {
+        assert(argNumber in 0 until signature.size)
+        return when (signature[argNumber]) {
+            ArgType.STRING -> {
+                val str = textData[value] ?: error("String argument isn't in text data $type")
+                Literal(str)
+            }
+            ArgType.INT -> Literal(value)
+        }
     }
 
     private fun decompileEvent(header: EventHeader): AbstractEventDecl {
@@ -404,8 +441,11 @@ class Decompiler3DS private constructor(private val input: ByteArray, private va
         position += 1 // Consume the complete assignment op.
         val rhs = popExpr()
         val lhs = getAssignmentLeftHandSide()
-        val type =
-            SHORTHAND_TOKEN_TYPES[op] ?: throw DecompileError("Unexpected operator in shorthand assignment", position)
+        val type = SHORTHAND_TOKEN_TYPES[op]
+            ?: throw DecompileError(
+                "Unexpected operator in shorthand assignment",
+                position
+            )
         exprState = ExprState.NORMAL
         return ExprStmt(BinaryExpr(lhs, type, rhs))
     }

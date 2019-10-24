@@ -17,6 +17,11 @@ class ExdArgs(parser: ArgParser) {
         help = "enable experimental code transformations"
     )
 
+    val awakening by parser.flagging(
+        "-a", "--awakening",
+        help = "treat inputs as Awakening scripts"
+    )
+
     val source by parser.positional(
         "SOURCE",
         help = "source file symbol"
@@ -26,7 +31,7 @@ class ExdArgs(parser: ArgParser) {
 fun main(args: Array<String>) = mainBody {
     ArgParser(args).parseInto(::ExdArgs).run {
         try {
-            decompile(source, output, experimental)
+            decompile(source, output, experimental, awakening)
         } catch (error: DecompileError) {
             println("Decompiling Failed!")
             if (error.address != -1)

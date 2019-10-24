@@ -168,10 +168,11 @@ fun TokenType.toOpcode3DS(): Opcode3DS {
         TokenType.ASSIGN_MINUS -> Opcode3DS.MINUS
         TokenType.ASSIGN_TIMES -> Opcode3DS.TIMES
         TokenType.ASSIGN_DIVIDE -> Opcode3DS.DIVIDE
+        TokenType.ASSIGN_MODULO -> Opcode3DS.MODULO
         TokenType.ASSIGN_FPLUS -> Opcode3DS.FPLUS
         TokenType.ASSIGN_FMINUS -> Opcode3DS.FMINUS
         TokenType.ASSIGN_FTIMES -> Opcode3DS.FTIMES
         TokenType.ASSIGN_FDIVIDE -> Opcode3DS.FDIVIDE
-        else -> throw IllegalArgumentException("Given TokenType does not have a corresponding opcode.")
+        else -> throw IllegalArgumentException("$this does not have a corresponding opcode.")
     }
 }

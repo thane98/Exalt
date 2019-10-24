@@ -7,12 +7,14 @@ import java.util.prefs.Preferences
 class Config {
     private val prefs = Preferences.userNodeForPackage(Config::class.java)
     var experimentalMode = SimpleBooleanProperty()
+    var awakeningMode = SimpleBooleanProperty()
     var showToolBar = SimpleBooleanProperty()
     var showStatusBar = SimpleBooleanProperty()
     var showConsole = SimpleBooleanProperty()
     var theme = SimpleStringProperty()
 
     init {
+        awakeningMode.value = prefs.getBoolean("awakeningMode", false)
         experimentalMode.value = prefs.getBoolean("experimentalMode", false)
         showToolBar.value = prefs.getBoolean("showToolBar", true)
         showStatusBar.value = prefs.getBoolean("showStatusBar", true)
@@ -23,6 +25,7 @@ class Config {
     }
 
     fun save() {
+        prefs.putBoolean("awakeningMode", awakeningMode.value)
         prefs.putBoolean("experimentalMode", experimentalMode.value)
         prefs.putBoolean("showToolBar", showToolBar.value)
         prefs.putBoolean("showStatusBar", showStatusBar.value)

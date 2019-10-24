@@ -81,6 +81,7 @@ class Parser(private val tokens: List<Token>, private val log: Log) {
             TokenType.ASSIGN_MINUS to AssignmentParselet(),
             TokenType.ASSIGN_TIMES to AssignmentParselet(),
             TokenType.ASSIGN_DIVIDE to AssignmentParselet(),
+            TokenType.ASSIGN_MODULO to AssignmentParselet(),
             TokenType.ASSIGN_FPLUS to AssignmentParselet(),
             TokenType.ASSIGN_FMINUS to AssignmentParselet(),
             TokenType.ASSIGN_FTIMES to AssignmentParselet(),

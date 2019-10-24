@@ -70,6 +70,7 @@ class Lexer(
             "-=" to TokenType.ASSIGN_MINUS,
             "*=" to TokenType.ASSIGN_TIMES,
             "/=" to TokenType.ASSIGN_DIVIDE,
+            "%=" to TokenType.ASSIGN_MODULO,
             "+=f" to TokenType.ASSIGN_FPLUS,
             "-=f" to TokenType.ASSIGN_FMINUS,
             "*=f" to TokenType.ASSIGN_FTIMES,

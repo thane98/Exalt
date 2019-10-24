@@ -35,6 +35,7 @@
             <MenuItem fx:id="saveAsMenuItem" disable="true" mnemonicParsing="false" text="Save As…" onAction="#saveFileAs" accelerator="Shortcut+Shift+S"/>
             <SeparatorMenuItem mnemonicParsing="false"/>
             <CheckMenuItem fx:id="experimentalModeItem" mnemonicParsing="false" text="Experimental Mode" />
+            <CheckMenuItem fx:id="awakeningModeItem" mnemonicParsing="false" text="Awakening Mode" />
             <SeparatorMenuItem mnemonicParsing="false"/>
             <MenuItem mnemonicParsing="false" text="Quit" onAction="#quit"/>
         </Menu>

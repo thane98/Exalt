@@ -35,6 +35,8 @@ class MainWindowController : Initializable {
     @FXML
     private lateinit var experimentalModeItem: CheckMenuItem
     @FXML
+    private lateinit var awakeningModeItem: CheckMenuItem
+    @FXML
     private lateinit var closeMenuItem: MenuItem
     @FXML
     private lateinit var saveMenuItem: MenuItem
@@ -97,6 +99,7 @@ class MainWindowController : Initializable {
     }
 
     private fun createConfigPropertyBindings() {
+        awakeningModeItem.selectedProperty().bindBidirectional(config.awakeningMode)
         experimentalModeItem.selectedProperty().bindBidirectional(config.experimentalMode)
         showToolBarItem.selectedProperty().bindBidirectional(config.showToolBar)
         showStatusBarItem.selectedProperty().bindBidirectional(config.showStatusBar)
@@ -183,7 +186,8 @@ class MainWindowController : Initializable {
         val task = object : Task<Unit>() {
             override fun call() {
                 Platform.runLater {
-                    scriptsPane.tabs.add(ScriptEditor(file, config.experimentalMode.value))
+                    val editor = ScriptEditor(file, config.experimentalMode.value, config.awakeningMode.value)
+                    scriptsPane.tabs.add(editor)
                     scriptsPane.selectionModel.selectLast()
                 }
             }

@@ -37,6 +37,7 @@ enum class TokenType {
     ASSIGN,
     ASSIGN_PLUS, ASSIGN_MINUS, ASSIGN_TIMES, ASSIGN_DIVIDE,
     ASSIGN_FPLUS, ASSIGN_FMINUS, ASSIGN_FTIMES, ASSIGN_FDIVIDE,
+    ASSIGN_MODULO,
 
     // Misc Operators
     FRAME_REF,
@@ -57,6 +58,7 @@ enum class TokenType {
             ASSIGN_MINUS -> true
             ASSIGN_TIMES -> true
             ASSIGN_DIVIDE -> true
+            ASSIGN_MODULO -> true
             ASSIGN_FPLUS -> true
             ASSIGN_FMINUS -> true
             ASSIGN_FTIMES -> true
@@ -106,6 +108,7 @@ enum class TokenType {
             ASSIGN_MINUS -> return Precedence.ASSIGNMENT
             ASSIGN_TIMES -> return Precedence.ASSIGNMENT
             ASSIGN_DIVIDE -> return Precedence.ASSIGNMENT
+            ASSIGN_MODULO -> return Precedence.ASSIGNMENT
             ASSIGN_FPLUS -> return Precedence.ASSIGNMENT
             ASSIGN_FMINUS -> return Precedence.ASSIGNMENT
             ASSIGN_FTIMES -> return Precedence.ASSIGNMENT
@@ -158,6 +161,7 @@ enum class TokenType {
             ASSIGN_MINUS -> return "-="
             ASSIGN_TIMES -> return "*="
             ASSIGN_DIVIDE -> return "/="
+            ASSIGN_MODULO -> return "%="
             ASSIGN_FPLUS -> return "+=f"
             ASSIGN_FMINUS -> return "-=f"
             ASSIGN_FTIMES -> return "*=f"

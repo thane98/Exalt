@@ -3,9 +3,7 @@ package com.thane98.exalt.editor
 import com.thane98.exalt.decompiler.decompile
 import javafx.application.Platform
 import javafx.beans.binding.Bindings
-import javafx.collections.ListChangeListener
 import javafx.concurrent.Task
-import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Node
@@ -16,7 +14,6 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
-import javafx.stage.Popup
 import org.controlsfx.control.PopOver
 import org.controlsfx.glyphfont.Glyph
 import org.fxmisc.flowless.VirtualizedScrollPane
@@ -66,11 +63,12 @@ class ScriptEditor(title: String) : Tab(title) {
     val codeArea = CodeArea()
     lateinit var findReplaceBar: HBox
 
-    constructor(sourceFile: File, experimental: Boolean = false) : this(sourceFile.name) {
+    constructor(sourceFile: File, experimental: Boolean = false, awakening: Boolean = false)
+            : this(sourceFile.name) {
         this.sourceFile = sourceFile
         if (sourceFile.path.endsWith(".cmb"))
             destFile = sourceFile
-        codeArea.replaceText(0, 0, tryOpenFile(sourceFile, experimental))
+        codeArea.replaceText(0, 0, tryOpenFile(sourceFile, experimental, awakening))
         codeArea.undoManager.forgetHistory() // Don't allow user to hit undo in the initial window
     }
 
@@ -212,9 +210,9 @@ class ScriptEditor(title: String) : Tab(title) {
         return codeArea.text.slice(pos - 4 until pos) == "    "
     }
 
-    private fun tryOpenFile(file: File, experimental: Boolean): String {
+    private fun tryOpenFile(file: File, experimental: Boolean, awakening: Boolean): String {
         return if (file.path.endsWith(".cmb"))
-            decompile(file.path, experimental)
+            decompile(file.path, experimental, awakening)
         else
             String(Files.readAllBytes(Paths.get(file.path)))
     }
