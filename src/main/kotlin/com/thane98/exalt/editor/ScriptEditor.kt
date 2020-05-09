@@ -185,7 +185,7 @@ class ScriptEditor(title: String) : Tab(title) {
         val selectIndex = findText(target)
         if (selectIndex != -1) {
             codeArea.selectRange(selectIndex, selectIndex + target.length)
-            codeArea.scrollYToPixel(codeArea.currentParagraph * 20.0)
+            codeArea.requestFollowCaret()
         }
     }
 
@@ -193,7 +193,7 @@ class ScriptEditor(title: String) : Tab(title) {
         val targetIndex = findText(target)
         if (targetIndex != -1) {
             codeArea.replaceText(targetIndex, targetIndex + target.length, replacement)
-            codeArea.scrollYToPixel(codeArea.currentParagraph * 20.0)
+            codeArea.requestFollowCaret()
         }
     }
 
