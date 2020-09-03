@@ -47,6 +47,10 @@ class SourceManager {
     }
 
     private fun findSource(pathString: String): Path {
+        val absolutePath = Paths.get(pathString)
+        if (absolutePath.isAbsolute && Files.exists(absolutePath)) {
+            return absolutePath
+        }
         for (path in searchPaths) {
             val target = Paths.get("$path/$pathString")
             if (Files.exists(target) && !Files.isDirectory(target))
