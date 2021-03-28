@@ -53,6 +53,12 @@ class Funcall(val target: String, val args: List<Expr>, var callID: Int = -1): E
         return visitor.visitFuncall(this)
     }
 
+    val isExlcall: Boolean
+        get() = target == "__exlcall__"
+
+    val isFormat: Boolean
+        get() = target == "format"
+
     val isLocalCall: Boolean
         get() = callID != -1
 }

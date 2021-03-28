@@ -51,6 +51,7 @@ enum class Opcode3DS(val opcode: Byte) {
     RS(0x37),
     EQ(0x38),
     FEQ(0x39),
+    EXLCALL(0x3A),
     NE(0x3B),
     FNE(0x3C),
     LT(0x3E),

@@ -244,12 +244,21 @@ class CodeGenerator3DS private constructor(private val script: Block, private va
     }
 
     override fun visitFuncall(expr: Funcall) {
-        for (arg in expr.args)
-            arg.accept(this)
+        for (arg in expr.args) {
+            if(!(expr.isExlcall && arg == expr.args.first())) {
+                arg.accept(this)
+            }
+        }
         when {
-            expr.target == "format" -> {
+            expr.isFormat -> {
                 result.add(Opcode3DS.FORMAT)
                 result.add(expr.args.size)
+            }
+            expr.isExlcall -> {
+                val id = expr.args[0] as Literal
+                result.add(Opcode3DS.EXLCALL)
+                result.add((id.value as Int).toByte())
+                result.add(expr.args.size - 1)
             }
             expr.isLocalCall -> {
                 result.add(Opcode3DS.LOCAL_CALL)

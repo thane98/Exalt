@@ -22,6 +22,7 @@
 }
 
 .lineno {
+    -fx-pref-width: 60px;
     -fx-font-size: 12pt;
     -fx-background-color: black;
 }

@@ -316,6 +316,7 @@ class Decompiler3DS private constructor(private val input: ByteArray,
                     else
                         exprStack.push(decompileBinaryExpr(op))
                 }
+                Opcode3DS.EXLCALL -> exprStack.push(decompileExlcall())
                 Opcode3DS.LOCAL_CALL -> exprStack.push(decompileLocalCall())
                 Opcode3DS.GLOBAL_CALL -> exprStack.push(decompileGlobalCall())
                 Opcode3DS.SET_RETURN -> contents.add(Return(popExpr()))
@@ -448,6 +449,12 @@ class Decompiler3DS private constructor(private val input: ByteArray,
             )
         exprState = ExprState.NORMAL
         return ExprStmt(BinaryExpr(lhs, type, rhs))
+    }
+
+    private fun decompileExlcall(): Funcall {
+        val id = next().toInt()
+        val args = popFunctionArgs(next().toInt())
+        return Funcall("__exlcall__", listOf(Literal(id)) + args)
     }
 
     private fun getAssignmentLeftHandSide(): Ref {

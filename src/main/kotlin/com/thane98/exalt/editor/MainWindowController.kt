@@ -66,8 +66,6 @@ class MainWindowController : Initializable {
     @FXML
     private lateinit var statusBar: ToolBar
     @FXML
-    private lateinit var themeGroup: ToggleGroup
-    @FXML
     private lateinit var consoleContainer: VBox
     @FXML
     private lateinit var mainSplitPane: SplitPane
@@ -350,7 +348,6 @@ class MainWindowController : Initializable {
     }
 
     private fun currentEditor(): ScriptEditor {
-        assert(scriptsPane.tabs.isNotEmpty())
         return scriptsPane.selectionModel.selectedItem as ScriptEditor
     }
 }
