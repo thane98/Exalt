@@ -12,7 +12,7 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
             for (entry in script.contents) {
                 entry.accept(printer)
                 if (entry != script.contents.last())
-                    printer.sb.appendln()
+                    printer.sb.appendLine()
             }
             return printer.sb.toString()
         }
@@ -117,9 +117,9 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
 
     override fun visitBlock(stmt: Block) {
         if (stmt.contents.isEmpty())
-            sb.appendln("{}")
+            sb.appendLine("{}")
         else {
-            sb.appendln('{')
+            sb.appendLine('{')
             indentLevel++
             for (line in stmt.contents) {
                 indent()
@@ -127,7 +127,7 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
             }
             indentLevel--
             indent()
-            sb.appendln('}')
+            sb.appendLine('}')
         }
     }
 
@@ -168,17 +168,17 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
     }
 
     override fun visitLabel(stmt: Label) {
-        sb.append("label ").append(stmt.symbol.name).appendln(';')
+        sb.append("label ").append(stmt.symbol.name).appendLine(';')
     }
 
     override fun visitGoto(stmt: Goto) {
         assert(stmt.target != null)
-        sb.append("goto ").append(stmt.target!!.name).appendln(';')
+        sb.append("goto ").append(stmt.target!!.name).appendLine(';')
     }
 
     override fun visitExprStmt(stmt: ExprStmt) {
         stmt.expr.accept(this)
-        sb.appendln(';')
+        sb.appendLine(';')
     }
 
     override fun visitReturn(stmt: Return) {
@@ -187,11 +187,11 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
             sb.append(' ')
             stmt.value.accept(this)
         }
-        sb.appendln(';')
+        sb.appendLine(';')
     }
 
     override fun visitYield(stmt: Yield) {
-        sb.appendln("yield();")
+        sb.appendLine("yield();")
     }
 
     override fun visitWhile(stmt: While) {
@@ -221,7 +221,7 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
     override fun visitMatch(stmt: Match) {
         sb.append("match(")
         stmt.switch.accept(this)
-        sb.appendln(") {")
+        sb.appendLine(") {")
         indentLevel++
         for (case in stmt.cases) {
             indent()
@@ -236,6 +236,6 @@ class PrettyPrinter private constructor(): ExprVisitor<Unit>, StmtVisitor<Unit> 
         }
         indentLevel--
         indent()
-        sb.appendln('}')
+        sb.appendLine('}')
     }
 }

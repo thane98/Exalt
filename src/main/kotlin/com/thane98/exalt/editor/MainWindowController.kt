@@ -16,7 +16,8 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
-import jfxtras.styles.jmetro8.JMetro
+import jfxtras.styles.jmetro.JMetro
+import jfxtras.styles.jmetro.Style
 import java.io.File
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -80,22 +81,14 @@ class MainWindowController : Initializable {
 
 
     override fun initialize(location: URL?, resources: ResourceBundle?) {
-        // Pull theme selection from config
-        when (config.theme.value) {
-            "Light" -> themeGroup.selectToggle(themeGroup.toggles[0])
-            "Dark" -> themeGroup.selectToggle(themeGroup.toggles[1])
-        }
-
         // Configure resizing for console and spacers.
         HBox.setHgrow(toolBarSpacer, Priority.ALWAYS)
         HBox.setHgrow(statusBarSpacer, Priority.ALWAYS)
         scriptsPane.tabs.addListener { _: Observable -> toggleActions() }
-        themeGroup.selectedToggleProperty().addListener { _: Observable -> updateTheme() }
 
         createConfigPropertyBindings()
         toggleActions()
         setupFileDialogs()
-        updateTheme()
     }
 
     private fun createConfigPropertyBindings() {
@@ -148,23 +141,6 @@ class MainWindowController : Initializable {
         compileToolBarItem.isDisable = noEditorsOpen
         for (item in editMenu.items)
             item.isDisable = noEditorsOpen
-    }
-
-    @FXML
-    private fun updateTheme() {
-        val selectedThemeItem = themeGroup.selectedToggle as RadioMenuItem
-        config.theme.value = selectedThemeItem.text
-        root.stylesheets.clear()
-        when (selectedThemeItem.text) {
-            "Light" -> {
-                JMetro(JMetro.Style.LIGHT).applyTheme(root)
-                root.stylesheets.add(this.javaClass.getResource("styles-light.css").toExternalForm())
-            }
-            "Dark" -> {
-                JMetro(JMetro.Style.DARK).applyTheme(root)
-                root.stylesheets.add(this.javaClass.getResource("styles-dark.css").toExternalForm())
-            }
-        }
     }
 
     @FXML

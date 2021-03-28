@@ -18,13 +18,9 @@
 <?import javafx.scene.control.RadioMenuItem?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
-<?import org.controlsfx.glyphfont.Glyph?>
 <?import javafx.scene.control.SplitPane?>
 <VBox fx:id="root" prefHeight="400.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.thane98.exalt.editor.MainWindowController">
-    <fx:define>
-        <ToggleGroup fx:id="themeGroup" />
-    </fx:define>
     <MenuBar VBox.vgrow="NEVER">
         <Menu mnemonicParsing="false" text="File">
             <MenuItem mnemonicParsing="false" text="New" onAction="#newFile" accelerator="Shortcut+N" />
@@ -60,10 +56,6 @@
             <CheckMenuItem fx:id="showToolBarItem" text="Show Tool Bar" />
             <CheckMenuItem fx:id="showStatusBarItem" text="Show Status Bar" />
             <CheckMenuItem fx:id="showConsoleItem" text="Show Console" />
-            <Menu text="Theme">
-                <RadioMenuItem text="Light" toggleGroup="$themeGroup"/>
-                <RadioMenuItem text="Dark" toggleGroup="$themeGroup"/>
-            </Menu>
         </Menu>
     </MenuBar>
     <ToolBar fx:id="toolBar" prefHeight="40.0" prefWidth="200.0">
@@ -84,11 +76,7 @@
                  prefWidth="200.0" tabClosingPolicy="ALL_TABS"/>
         <VBox fx:id="consoleContainer">
             <HBox prefHeight="20" VBox.vgrow="NEVER" nodeOrientation="RIGHT_TO_LEFT">
-                <Button maxHeight="20" minHeight="20" onAction="#toggleConsole">
-                    <graphic>
-                        <Glyph fontFamily="FontAwesome" icon="CARET_DOWN" />
-                    </graphic>
-                </Button>
+                <Button maxHeight="20" minHeight="20" onAction="#toggleConsole" />
             </HBox>
             <TextArea id="console" fx:id="console" editable="false" VBox.vgrow="ALWAYS">
                 <contextMenu>
@@ -103,11 +91,7 @@
         </VBox>
     </SplitPane>
     <ToolBar id="statusBar" fx:id="statusBar">
-        <Button text="Console" onAction="#toggleConsole">
-            <graphic>
-                <Glyph fontFamily="FontAwesome" icon="Terminal" />
-            </graphic>
-        </Button>
+        <Button text="Console" onAction="#toggleConsole" />
         <Pane fx:id="statusBarSpacer" minWidth="-Infinity" prefHeight="0.0" prefWidth="200.0"/>
         <Label fx:id="compileLabel" visible="false" />
         <ProgressBar fx:id="progressBar" visible="false" />

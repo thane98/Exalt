@@ -14,8 +14,6 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
-import org.controlsfx.control.PopOver
-import org.controlsfx.glyphfont.Glyph
 import org.fxmisc.flowless.VirtualizedScrollPane
 import org.fxmisc.richtext.CodeArea
 import org.fxmisc.richtext.LineNumberFactory
@@ -56,8 +54,6 @@ class ScriptEditor(title: String) : Tab(title) {
 
     private val executor = Executors.newSingleThreadExecutor()
     private var subscription: Subscription
-    private val completionPopOver = PopOver()
-    private val completionContents = ListView<String>()
     var sourceFile: File? = null
     var destFile: File? = null
     val codeArea = CodeArea()
@@ -110,27 +106,6 @@ class ScriptEditor(title: String) : Tab(title) {
             }
         }
         this.setOnClosed { stopProcessing() }
-        configureCompletionPopOver()
-    }
-
-    private fun configureCompletionPopOver() {
-        completionPopOver.contentNode = completionContents
-        completionPopOver.arrowLocation = PopOver.ArrowLocation.TOP_CENTER
-        completionContents.items.addAll("Test", "Test 2")
-        completionContents.prefHeightProperty()
-            .bind(Bindings.size(completionContents.items).multiply(36).add(2))
-        completionPopOver.scene.addEventFilter(KeyEvent.KEY_PRESSED) { keyEvent ->
-            if (keyEvent.code == KeyCode.ESCAPE) {
-                completionPopOver.hide()
-                keyEvent.consume()
-            } else if (keyEvent.code == KeyCode.ENTER) {
-                val target = getCurrentWord()
-                val replacement = completionContents.selectionModel.selectedItem
-                codeArea.replaceText(codeArea.caretPosition - target.length, codeArea.caretPosition, replacement)
-                completionPopOver.hide()
-                keyEvent.consume()
-            }
-        }
     }
 
     private fun createEditorContent(): Node {
@@ -174,7 +149,7 @@ class ScriptEditor(title: String) : Tab(title) {
         }
 
         val spacer = Pane()
-        val closeButton = Button("", Glyph("FontAwesome", "Close"))
+        val closeButton = Button("")
         closeButton.setOnAction { bar.isVisible = false }
         bar.children.addAll(findField, replaceField, findButton, replaceButton, replaceAllButton, spacer, closeButton)
         HBox.setHgrow(spacer, Priority.ALWAYS)
@@ -230,29 +205,6 @@ class ScriptEditor(title: String) : Tab(title) {
 
     private fun applyHighlighting(highlighting: StyleSpans<Collection<String>>) {
         codeArea.setStyleSpans(0, highlighting)
-        var revealedPopOver = false
-        if (codeArea.caretBounds.isPresent) {
-            val currentWord = getCurrentWord()
-            if (currentWord.isNotEmpty()) {
-                populateCompletionPopOver(currentWord)
-                if (completionContents.items.isNotEmpty()) {
-                    val bounds = codeArea.caretBounds.get()
-                    revealedPopOver = true
-                    completionPopOver.show(codeArea, bounds.minX, bounds.maxY)
-                }
-            }
-        }
-        if (!revealedPopOver)
-            completionPopOver.hide()
-    }
-
-    private fun populateCompletionPopOver(prefix: String) {
-        completionContents.items.clear()
-        for (str in CompletionManager.fatesFunctions) {
-            if (str.startsWith(prefix))
-                completionContents.items.add(str)
-            if (completionContents.items.size >= 10) break
-        }
     }
 
     private fun getCurrentWord(): String {
