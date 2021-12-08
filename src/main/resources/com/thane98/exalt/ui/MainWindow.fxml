@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox fx:id="root" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.thane98.exalt.ui.controllers.MainWindowController">
+    <MenuBar VBox.vgrow="NEVER">
+        <Menu mnemonicParsing="false" text="File">
+            <MenuItem mnemonicParsing="false" text="New" onAction="#onNewFile" accelerator="Shortcut+N"/>
+            <MenuItem mnemonicParsing="false" onAction="#onOpenFile" text="Open…" accelerator="Shortcut+O"/>
+            <SeparatorMenuItem/>
+            <MenuItem mnemonicParsing="false" text="Save" onAction="#onSaveFile" accelerator="Shortcut+S"/>
+            <MenuItem mnemonicParsing="false" text="Save As…" onAction="#onSaveFileAs" accelerator="Shortcut+Shift+S"/>
+            <SeparatorMenuItem/>
+            <MenuItem mnemonicParsing="false" text="Quit" onAction="#onQuit"/>
+        </Menu>
+        <Menu fx:id="editMenu" mnemonicParsing="false" text="Edit">
+            <MenuItem mnemonicParsing="false" text="Undo" onAction="#onUndo" accelerator="Shortcut+Z"/>
+            <MenuItem mnemonicParsing="false" text="Redo" onAction="#onRedo" accelerator="Shortcut+Shift+Z"/>
+            <SeparatorMenuItem mnemonicParsing="false"/>
+            <MenuItem mnemonicParsing="false" text="Cut" onAction="#onCut" accelerator="Shortcut+X"/>
+            <MenuItem mnemonicParsing="false" text="Copy" onAction="#onCopy" accelerator="Shortcut+C"/>
+            <MenuItem mnemonicParsing="false" text="Paste" onAction="#onPaste" accelerator="Shortcut+V"/>
+            <MenuItem mnemonicParsing="false" text="Delete" onAction="#onDelete" accelerator="Delete"/>
+            <SeparatorMenuItem mnemonicParsing="false"/>
+            <MenuItem mnemonicParsing="false" text="Select All" onAction="#onSelectAll" accelerator="Shortcut+A"/>
+            <MenuItem mnemonicParsing="false" text="Unselect All" onAction="#onUnselectAll"/>
+            <SeparatorMenuItem mnemonicParsing="false"/>
+            <MenuItem mnemonicParsing="false" text="Find or Replace" onAction="#onShowFindReplaceBar"
+                      accelerator="Shortcut+F"/>
+            <SeparatorMenuItem mnemonicParsing="false"/>
+            <MenuItem mnemonicParsing="false" text="Options" onAction="#onOpenOptions"/>
+        </Menu>
+        <Menu text="View">
+            <CheckMenuItem fx:id="showToolBarMenuItem" text="Show Tool Bar"/>
+            <CheckMenuItem fx:id="showStatusBarMenuItem" text="Show Status Bar"/>
+            <CheckMenuItem fx:id="showConsoleMenuItem" text="Show Console"/>
+        </Menu>
+    </MenuBar>
+    <ToolBar fx:id="toolBar">
+        <Button onAction="#onNewFile">New</Button>
+        <Button onAction="#onOpenFile">Open</Button>
+        <Button onAction="#onSaveFile">Save</Button>
+        <Button onAction="#onSaveFileAs">Save As</Button>
+        <Pane minWidth="-Infinity" prefHeight="0.0" prefWidth="100.0" HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="gameComboBox"/>
+        <Button onAction="#onCompileFile">Compile</Button>
+        <Button onAction="#onCompileFileAs">Compile As</Button>
+    </ToolBar>
+    <SplitPane VBox.vgrow="ALWAYS" orientation="VERTICAL" fx:id="splitPane" onDragDropped="#onDragDropped"
+               onDragOver="#onDragOver">
+        <TabPane fx:id="tabPane" tabClosingPolicy="ALL_TABS" VBox.vgrow="ALWAYS"/>
+    </SplitPane>
+    <HBox VBox.vgrow="NEVER" id="console" prefHeight="50" alignment="CENTER_RIGHT">
+        <padding>
+            <Insets left="10" right="10" top="5" bottom="5"/>
+        </padding>
+        <Button onAction="#onToggleConsole">Toggle Console</Button>
+        <Pane HBox.hgrow="ALWAYS"/>
+        <Label fx:id="statusMessage"/>
+    </HBox>
+</VBox>

@@ -1,488 +1,442 @@
 package com.thane98.exalt.compiler
 
-import com.thane98.exalt.ast.*
-import com.thane98.exalt.common.Precedence
-import com.thane98.exalt.common.TokenType
+import com.thane98.exalt.common.SymbolTable
+import com.thane98.exalt.compiler.parselet.*
+import com.thane98.exalt.error.AggregatedCompilerError
+import com.thane98.exalt.error.CompilerError
+import com.thane98.exalt.error.SymbolRedefinitionException
+import com.thane98.exalt.model.*
+import com.thane98.exalt.model.decl.Annotation
+import com.thane98.exalt.model.decl.Decl
+import com.thane98.exalt.model.decl.EventDecl
+import com.thane98.exalt.model.decl.FunctionDecl
+import com.thane98.exalt.model.decl.ScriptDecl
+import com.thane98.exalt.model.expr.*
+import com.thane98.exalt.model.stmt.*
+import com.thane98.exalt.model.symbol.FunctionSymbol
+import com.thane98.exalt.model.symbol.LabelSymbol
+import com.thane98.exalt.model.symbol.VarSymbol
 
-class Parser(private val tokens: List<Token>, private val log: Log) {
-    private val unresolvedGotos = hashMapOf<String, MutableList<Pair<Token, Goto>>>()
-    private val unresolvedVars = mutableListOf<Pair<VarSymbol, Int>>()
-    internal val unresolvedCalls = hashMapOf<String, MutableList<Funcall>>()
-    internal val symbolTable = SymbolTable()
-    internal val usedVars = BooleanArray(256)
-    private var nextEventID = 0
-    private var position = 0
+class Parser(
+    private val errorLog: CompilerErrorLog,
+    private val tokens: List<Token>,
+    var features: ParserFeatures = ParserFeatures(true),
+) {
+    private val symbolTable = SymbolTable()
+    private val labelTracker = LabelTracker(symbolTable)
     private val atEnd: Boolean
         get() = tokens[position].type == TokenType.EOF
 
-    companion object {
-        private val DECL_BEGINNINGS = hashSetOf(
-            TokenType.EVENT, TokenType.FUNC, TokenType.CONST
-        )
+    private var position = 0
+    private var hasScriptDecl = false
 
-        private val STMT_BEGINNINGS = hashSetOf(
-            TokenType.VAR, TokenType.LET, TokenType.GOTO,
-            TokenType.LABEL, TokenType.MATCH, TokenType.IF,
-            TokenType.FOR, TokenType.WHILE, TokenType.YIELD,
-            TokenType.RETURN, TokenType.RBRACE
-        )
+    private val stmtBeginnings = setOf(
+        TokenType.VAR,
+        TokenType.GOTO,
+        TokenType.LABEL,
+        TokenType.WHILE,
+        TokenType.FOR,
+        TokenType.MATCH,
+        TokenType.YIELD,
+        TokenType.RETURN,
+        TokenType.LBRACE,
+        // With this we assume that the next } will terminate the block.
+        // Given that scripts are *usually* simple, this is more likely
+        // than synchronizing to the wrong block closure.
+        TokenType.RBRACE,
+    )
 
-        private val PREFIX_ACTIONS = hashMapOf(
-            TokenType.NOT to PrefixOperatorParselet(),
-            TokenType.BNOT to PrefixOperatorParselet(),
-            TokenType.INC to PreincrementParselet(),
-            TokenType.DEC to PreincrementParselet(),
-            TokenType.FMINUS to MinusParselet(),
-            TokenType.MINUS to MinusParselet(),
-            TokenType.IDENTIFIER to IdentifierParselet(),
-            TokenType.FRAME_REF to FrameRefParselet(),
-            TokenType.BAND to AsPointerParselet(),
-            TokenType.LPAREN to GroupedParselet(),
-            TokenType.FIX to ReservedFunctionParselet(),
-            TokenType.FLOAT to ReservedFunctionParselet(),
-            TokenType.INT to LiteralParselet(),
-            TokenType.REAL to LiteralParselet(),
-            TokenType.STRING to LiteralParselet()
-        )
+    private val declBeginnings = setOf(
+        TokenType.SCRIPT,
+        TokenType.EVENT,
+        TokenType.FUNC,
+    )
 
-        private val INFIX_ACTIONS = hashMapOf(
-            TokenType.PLUS to InfixOperatorParselet(Precedence.ADDITION),
-            TokenType.MINUS to InfixOperatorParselet(Precedence.ADDITION),
-            TokenType.TIMES to InfixOperatorParselet(Precedence.MULTIPLICATION),
-            TokenType.DIVIDE to InfixOperatorParselet(Precedence.MULTIPLICATION),
-            TokenType.MODULO to InfixOperatorParselet(Precedence.MULTIPLICATION),
-            TokenType.FPLUS to InfixOperatorParselet(Precedence.ADDITION),
-            TokenType.FMINUS to InfixOperatorParselet(Precedence.ADDITION),
-            TokenType.FTIMES to InfixOperatorParselet(Precedence.MULTIPLICATION),
-            TokenType.FDIVIDE to InfixOperatorParselet(Precedence.MULTIPLICATION),
-            TokenType.EQ to InfixOperatorParselet(Precedence.EQUALITY),
-            TokenType.NE to InfixOperatorParselet(Precedence.EQUALITY),
-            TokenType.LT to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.LE to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.GT to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.GE to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.FEQ to InfixOperatorParselet(Precedence.EQUALITY),
-            TokenType.FNE to InfixOperatorParselet(Precedence.EQUALITY),
-            TokenType.FLT to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.FLE to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.FGT to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.FGE to InfixOperatorParselet(Precedence.COMPARISON),
-            TokenType.RS to InfixOperatorParselet(Precedence.SHIFT),
-            TokenType.LS to InfixOperatorParselet(Precedence.SHIFT),
-            TokenType.BAND to InfixOperatorParselet(Precedence.BAND),
-            TokenType.BOR to InfixOperatorParselet(Precedence.BOR),
-            TokenType.XOR to InfixOperatorParselet(Precedence.XOR),
-            TokenType.AND to InfixOperatorParselet(Precedence.AND),
-            TokenType.OR to InfixOperatorParselet(Precedence.OR),
-            TokenType.INC to PostincrementParselet(),
-            TokenType.DEC to PostincrementParselet(),
-            TokenType.ASSIGN to AssignmentParselet(),
-            TokenType.ASSIGN_PLUS to AssignmentParselet(),
-            TokenType.ASSIGN_MINUS to AssignmentParselet(),
-            TokenType.ASSIGN_TIMES to AssignmentParselet(),
-            TokenType.ASSIGN_DIVIDE to AssignmentParselet(),
-            TokenType.ASSIGN_MODULO to AssignmentParselet(),
-            TokenType.ASSIGN_FPLUS to AssignmentParselet(),
-            TokenType.ASSIGN_FMINUS to AssignmentParselet(),
-            TokenType.ASSIGN_FTIMES to AssignmentParselet(),
-            TokenType.ASSIGN_FDIVIDE to AssignmentParselet()
-        )
-    }
+    private val prefixActions = mapOf(
+        TokenType.LOGICAL_NOT to PrefixOperatorParselet(Operator.LOGICAL_NOT),
+        TokenType.BINARY_NOT to PrefixOperatorParselet(Operator.BINARY_NOT),
+        TokenType.INCREMENT to PrefixIncrementParselet(Operator.INCREMENT),
+        TokenType.DECREMENT to PrefixIncrementParselet(Operator.DECREMENT),
+        TokenType.FMINUS to MinusParselet(Operator.FLOAT_NEGATE),
+        TokenType.MINUS to MinusParselet(Operator.NEGATE),
+        TokenType.IDENTIFIER to IdentifierParselet(symbolTable),
+        TokenType.FRAME_REF to FrameRefParselet(symbolTable, false),
+        TokenType.GLOBAL_FRAME_REF to FrameRefParselet(symbolTable, true),
+        TokenType.AMPERSAND to PointerParselet(),
+        TokenType.LPAREN to GroupedParselet(),
+        TokenType.INT to LiteralParselet(),
+        TokenType.FLOAT to LiteralParselet(),
+        TokenType.STRING to LiteralParselet()
+    )
 
-    fun parse(): Block {
-        val decls = mutableListOf<Stmt>()
+    private val infixActions = mapOf(
+        TokenType.PLUS to InfixOperatorParselet(Operator.ADD),
+        TokenType.MINUS to InfixOperatorParselet(Operator.SUBTRACT),
+        TokenType.TIMES to InfixOperatorParselet(Operator.MULTIPLY),
+        TokenType.DIVIDE to InfixOperatorParselet(Operator.DIVIDE),
+        TokenType.MODULO to InfixOperatorParselet(Operator.MODULO),
+        TokenType.FPLUS to InfixOperatorParselet(Operator.FLOAT_ADD),
+        TokenType.FMINUS to InfixOperatorParselet(Operator.FLOAT_SUBTRACT),
+        TokenType.FTIMES to InfixOperatorParselet(Operator.FLOAT_MULTIPLY),
+        TokenType.FDIVIDE to InfixOperatorParselet(Operator.FLOAT_DIVIDE),
+        TokenType.EQ to InfixOperatorParselet(Operator.EQUAL),
+        TokenType.NE to InfixOperatorParselet(Operator.NOT_EQUAL),
+        TokenType.LT to InfixOperatorParselet(Operator.LESS_THAN),
+        TokenType.LE to InfixOperatorParselet(Operator.LESS_THAN_OR_EQUAL_TO),
+        TokenType.GT to InfixOperatorParselet(Operator.GREATER_THAN),
+        TokenType.GE to InfixOperatorParselet(Operator.GREATER_THAN_OR_EQUAL_TO),
+        TokenType.FEQ to InfixOperatorParselet(Operator.FLOAT_EQUAL),
+        TokenType.FNE to InfixOperatorParselet(Operator.FLOAT_NOT_EQUAL),
+        TokenType.FLT to InfixOperatorParselet(Operator.FLOAT_LESS_THAN),
+        TokenType.FLE to InfixOperatorParselet(Operator.FLOAT_LESS_THAN_OR_EQUAL_TO),
+        TokenType.FGT to InfixOperatorParselet(Operator.FLOAT_GREATER_THAN),
+        TokenType.FGE to InfixOperatorParselet(Operator.FLOAT_GREATER_THAN_OR_EQUAL_TO),
+        TokenType.RIGHT_SHIFT to InfixOperatorParselet(Operator.RIGHT_SHIFT),
+        TokenType.LEFT_SHIFT to InfixOperatorParselet(Operator.LEFT_SHIFT),
+        TokenType.AMPERSAND to InfixOperatorParselet(Operator.BINARY_AND),
+        TokenType.BINARY_OR to InfixOperatorParselet(Operator.BINARY_OR),
+        TokenType.XOR to InfixOperatorParselet(Operator.XOR),
+        TokenType.LOGICAL_AND to InfixOperatorParselet(Operator.LOGICAL_AND),
+        TokenType.LOGICAL_OR to InfixOperatorParselet(Operator.LOGICAL_OR),
+        TokenType.INCREMENT to PostfixIncrementParselet(Operator.INCREMENT),
+        TokenType.DECREMENT to PostfixIncrementParselet(Operator.DECREMENT),
+        TokenType.ASSIGN to AssignmentParselet(Operator.ASSIGN),
+        TokenType.ASSIGN_ADD to AssignmentParselet(Operator.ASSIGN_ADD),
+        TokenType.ASSIGN_SUBTRACT to AssignmentParselet(Operator.ASSIGN_SUBTRACT),
+        TokenType.ASSIGN_MULTIPLY to AssignmentParselet(Operator.ASSIGN_MULTIPLY),
+        TokenType.ASSIGN_DIVIDE to AssignmentParselet(Operator.ASSIGN_DIVIDE),
+        TokenType.ASSIGN_MODULO to AssignmentParselet(Operator.ASSIGN_MODULO),
+        TokenType.ASSIGN_BINARY_OR to AssignmentParselet(Operator.ASSIGN_BINARY_OR),
+        TokenType.ASSIGN_BINARY_AND to AssignmentParselet(Operator.ASSIGN_BINARY_AND),
+        TokenType.ASSIGN_XOR to AssignmentParselet(Operator.ASSIGN_XOR),
+        TokenType.ASSIGN_LEFT_SHIFT to AssignmentParselet(Operator.ASSIGN_LEFT_SHIFT),
+        TokenType.ASSIGN_RIGHT_SHIFT to AssignmentParselet(Operator.ASSIGN_RIGHT_SHIFT),
+        TokenType.ASSIGN_FLOAT_ADD to AssignmentParselet(Operator.ASSIGN_FLOAT_ADD),
+        TokenType.ASSIGN_FLOAT_SUBTRACT to AssignmentParselet(Operator.ASSIGN_FLOAT_SUBTRACT),
+        TokenType.ASSIGN_FLOAT_MULTIPLY to AssignmentParselet(Operator.ASSIGN_FLOAT_MULTIPLY),
+        TokenType.ASSIGN_FLOAT_DIVIDE to AssignmentParselet(Operator.ASSIGN_FLOAT_DIVIDE)
+    )
+
+    fun parse(): Script {
+        val decls = mutableListOf<Decl>()
+        if (peek().type != TokenType.SCRIPT) {
+            throw CompilerError.at(peek().position, "Script must start with a 'script' declaration.")
+        }
+        val scriptDecl = parseScriptDecl()
+        features = ParserFeatures.forGame(scriptDecl.game)
         while (!atEnd) {
             try {
-                val decl = parseDecl()
-                if (decl != null)
-                    decls.add(decl)
-            } catch (error: CompileError) {
-                log.logError(error)
+                decls.add(parseDecl())
+            } catch (error: CompilerError) {
+                errorLog.addError(error)
                 synchronizeToDecl()
             }
         }
-        return Block(decls)
+
+        if (errorLog.isFailedRun) {
+            throw AggregatedCompilerError(errorLog)
+        }
+
+        return Script(decls, scriptDecl.game, scriptDecl.scriptType)
     }
 
-    private fun parseDecl(): Stmt? {
+    private fun parseDecl(): Decl {
+        // This is just a wrapper currently. But it could turn into something
+        // more complicated if we add constants or other non-code decls
+        return parseEventOrFunctionDecl()
+    }
+
+    private fun parseScriptDecl(): ScriptDecl {
+        consume(TokenType.SCRIPT)
+        if (hasScriptDecl) {
+            throw CompilerError.at(previous.position, "Only one 'script' statement is allowed.")
+        }
+        consumeAll(TokenType.LPAREN, TokenType.STRING)
+        val gameString = previousValue.stringValue()
+        val game: Game
+        try {
+            game = Game.valueOf(gameString)
+        } catch (_: Exception) {
+            throw CompilerError.at(previous.position, "Expected one of ${Game.values()}")
+        }
+        consumeAll(TokenType.COMMA, TokenType.INT)
+        val scriptType = previousValue.intValue()
+        consumeAll(TokenType.RPAREN, TokenType.SEMICOLON)
+        hasScriptDecl = true
+        return ScriptDecl(game, scriptType)
+    }
+
+    private fun parseEventOrFunctionDecl(): Decl {
+        val annotations = parseAnnotations()
         return when (peek().type) {
-            TokenType.EVENT -> parseEvent()
-            TokenType.FUNC -> parseFunc()
-            TokenType.CONST -> parseConst()
-            else -> throw CompileError("Expected declaration.", peek().pos)
+            TokenType.EVENT -> parseEventDecl(annotations)
+            TokenType.FUNC -> parseFunctionDecl(annotations)
+            else -> throw CompilerError.at(peek().position, "Expected declaration.")
         }
     }
 
-    private fun parseEvent(): Stmt {
-        setupForEventOrFunc()
-        consume(TokenType.EVENT, TokenType.LBRACKET, TokenType.INT)
-        val type = previous.literal as Int
-        consume(TokenType.RBRACKET, TokenType.LPAREN)
-        val args = parseEventArgs()
-        consume(TokenType.RPAREN)
-        val body = parseBlock()
-        return EventDecl(finishEventOrFunc("", type, args.size), body, args)
-    }
-
-    private fun setupForEventOrFunc() {
-        usedVars.fill(false)
-        unresolvedVars.clear()
-        unresolvedGotos.clear()
-    }
-
-    private fun finishEventOrFunc(name: String, type: Int, arity: Int): EventSymbol {
-        if (unresolvedGotos.isNotEmpty()) {
-            for (entry in unresolvedGotos.values)
-                log.logError(CompileError("Unresolved goto.", entry.first().first.pos))
-        }
-        val numVars = allocateVars()
-        return EventSymbol(name, nextEventID++, type, arity, numVars)
-    }
-
-    private fun allocateVars(): Int {
-        var start = 0
-        for (entry in unresolvedVars) {
-            val blockIndex = findEmptyBlock(start, entry.second)
-            for (i in blockIndex until blockIndex + entry.second)
-                usedVars[i] = true
-            start += entry.second
-            entry.first.frameID = blockIndex
-        }
-        val frameSize = usedVars.lastIndexOf(true)
-        return if (frameSize != -1) frameSize + 1 else 0
-    }
-
-    private fun findEmptyBlock(start: Int, size: Int): Int {
-        var i = start
-        while (i < usedVars.size) {
-            var fits = true
-            var j = i
-            while (fits && j < i + size) {
-                if (usedVars[j]) {
-                    fits = false
-                    i = j + 1
-                }
-                j++
-            }
-            if (fits)
-                return i
-        }
-        throw CompileError("Unable to allocate space for all variables.", previous.pos)
-    }
-
-    private fun parseEventArgs(): List<Literal> {
-        val result = mutableListOf<Literal>()
-        if (!check(TokenType.RPAREN)) {
-            do {
-                val expr = parseExpr() as? Literal ?: throw CompileError("Expected constant.", previous.pos)
-                result.add(expr)
-            } while (match(TokenType.COMMA))
-        }
-        return result
-    }
-
-    private fun parseFunc(): Stmt {
-        setupForEventOrFunc()
-        symbolTable.enterScope()
-        consume(TokenType.FUNC, TokenType.IDENTIFIER)
-        val ident = previous
+    private fun parseFunctionDecl(annotations: MutableList<Annotation>): FunctionDecl {
+        consumeAll(TokenType.FUNC, TokenType.IDENTIFIER)
+        val identifier = previous.identifier!!
         consume(TokenType.LPAREN)
-        val params = parseFuncParameters()
+        val parameters = mutableListOf<VarSymbol>()
+        val body: Block
+        val symbol: FunctionSymbol
+        symbolTable.openNewEnvironment()
+        try {
+            if (!check(TokenType.RPAREN)) {
+                do {
+                    consume(TokenType.IDENTIFIER)
+                    val parameterName = previous.identifier!!
+                    val varSymbol = VarSymbol(parameterName, false)
+                    symbolTable.define(varSymbol)
+                    parameters.add(varSymbol)
+                } while (match(TokenType.COMMA))
+            }
+            consume(TokenType.RPAREN)
+
+            val testSymbol = symbolTable.lookupOrNull(identifier)
+            if (testSymbol != null && testSymbol !is FunctionSymbol) {
+                throw SymbolRedefinitionException(identifier)
+            } else if (testSymbol != null) {
+                symbol = testSymbol as FunctionSymbol
+            } else {
+                symbol = FunctionSymbol(identifier, parameters.size)
+                symbolTable.defineTopLevel(symbol)
+            }
+
+            body = parseBlock()
+        } finally {
+            symbolTable.closeEnvironment()
+        }
+
+        return FunctionDecl(symbol, parameters, body, annotations)
+    }
+
+    private fun parseEventDecl(annotations: MutableList<Annotation>): EventDecl {
+        consumeAll(TokenType.EVENT, TokenType.LBRACKET, TokenType.INT)
+        val eventType = previousValue.intValue()
+        consumeAll(TokenType.RBRACKET, TokenType.LPAREN)
+        val args = mutableListOf<Literal>()
+        if (!check(TokenType.RPAREN)) {
+            val realSimplifyNegativeIntsValue = features.simplifyNegativeInts
+            features.simplifyNegativeInts = true
+            do {
+                val expr = parseExpr() as? Literal ?: throw CompilerError.at(previous.position, "Expected constant.")
+                args.add(expr)
+            } while (match(TokenType.COMMA))
+            features.simplifyNegativeInts = realSimplifyNegativeIntsValue
+        }
         consume(TokenType.RPAREN)
         val body = parseBlock()
-
-        val sym = finishEventOrFunc(ident.literal as String, 0, params.size)
-        val calls = unresolvedCalls[ident.literal]
-        if (calls != null) {
-            for (call in calls)
-                call.callID = sym.id
-            unresolvedCalls.remove(ident.literal)
-        }
-        symbolTable.exitScope()
-        symbolTable.define(ident, sym)
-        return FuncDecl(sym, body, params)
+        return EventDecl(eventType, args, body, annotations)
     }
 
-    private fun parseFuncParameters(): List<VarSymbol> {
-        val result = mutableListOf<VarSymbol>()
-        if (!check(TokenType.RPAREN)) {
+    private fun parseAnnotations(): MutableList<Annotation> {
+        val annotations = mutableListOf<Annotation>()
+        while (peek().type == TokenType.AT_SIGN) {
+            annotations.add(parseAnnotation())
+        }
+        return annotations
+    }
+
+    private fun parseAnnotation(): Annotation {
+        consumeAll(TokenType.AT_SIGN, TokenType.IDENTIFIER)
+        val identifier = previous.identifier!!
+        val args = mutableListOf<String>()
+        if (match(TokenType.LPAREN)) {
             do {
-                val isExternal = match(TokenType.BAND)
-                consume(TokenType.IDENTIFIER)
-                usedVars[result.size] = true
-                val sym = VarSymbol(previous.literal as String, result.size)
-                sym.isExternal = isExternal
-                symbolTable.define(previous, sym)
-                result.add(sym)
+                consume(TokenType.STRING)
+                args.add(previousValue.stringValue())
             } while (match(TokenType.COMMA))
+            consume(TokenType.RPAREN)
         }
-        return result
+        return Annotation(identifier, args)
     }
 
-    private fun parseConst(): Stmt? {
-        consume(TokenType.CONST, TokenType.IDENTIFIER)
-        val ident = previous
-        consume(TokenType.ASSIGN)
-        val rhs = parseExpr() as? Literal ?: throw CompileError("Expected constant.", previous.pos)
-        consume(TokenType.SEMICOLON)
-        symbolTable.define(ident, Constant(ident.literal as String, rhs))
-        return null
-    }
-
-    internal fun parseExpr(precedence: Precedence = Precedence.NONE): Expr {
-        val token = advance()
-        val prefixAction = PREFIX_ACTIONS[token.type] ?: throw CompileError(
-            "Expected expression.",
-            token.pos
-        )
-
-        var expr = prefixAction.parse(token.type, this)
-        while (precedence < precedenceOfNext()) {
-            val next = advance()
-            val infixAction = INFIX_ACTIONS[next.type]!!
-            expr = infixAction.parse(next.type, expr, this)
+    private fun parseStmt(): Stmt {
+        // TODO: Assess whether or not we should have a separate "concrete" statement rule
+        //       so that you can't do:
+        //       if (someCondition())
+        //           var tmp = 1;
+        return when (peek().type) {
+            TokenType.FOR -> parseFor()
+            TokenType.GOTO -> parseGoto()
+            TokenType.IF -> parseIf()
+            TokenType.LABEL -> parseLabel()
+            TokenType.LBRACE -> parseBlock()
+            TokenType.MATCH -> parseMatch()
+            TokenType.RETURN -> parseReturn()
+            TokenType.VAR -> parseVarDecl()
+            TokenType.WHILE -> parseWhile()
+            TokenType.YIELD -> parseYield()
+            else -> parseExprStmt()
         }
-        return expr
-    }
-
-    private fun precedenceOfNext(): Precedence {
-        if (INFIX_ACTIONS.containsKey(peek().type))
-            return INFIX_ACTIONS[peek().type]!!.precedence()
-        return Precedence.NONE
     }
 
     private fun parseBlock(): Block {
-        symbolTable.enterScope()
-        consume(TokenType.LBRACE)
+        symbolTable.openNewEnvironment()
         val contents = mutableListOf<Stmt>()
-        while (!match(TokenType.RBRACE)) {
-            try {
-                val stmt = parseStmt()
-                if (stmt != null)
-                    contents.add(stmt)
-            } catch (error: CompileError) {
-                log.logError(error)
-                synchronizeToStmt()
+        try {
+            consume(TokenType.LBRACE)
+            while (!match(TokenType.RBRACE)) {
+                try {
+                    contents.add(parseStmt())
+                } catch (error: CompilerError) {
+                    errorLog.addError(error)
+                    synchronizeToStmt()
+                }
             }
+        } finally {
+            symbolTable.closeEnvironment()
         }
-        symbolTable.exitScope()
         return Block(contents)
     }
 
-    private fun parseStmt(): Stmt? {
-        return when (peek().type) {
-            TokenType.YIELD -> parseYield()
-            TokenType.IF -> parseIf()
-            TokenType.RETURN -> parseReturn()
-            TokenType.WHILE -> parseWhile()
-            TokenType.FOR -> parseFor()
-            TokenType.MATCH -> parseMatch()
-            TokenType.LET -> parseLet()
-            TokenType.VAR -> parseVar()
-            TokenType.LABEL -> parseLabel()
-            TokenType.GOTO -> parseGoto()
-            TokenType.LBRACE -> parseBlock()
-            else -> parseExprStmt()
+    private fun parseFor(): For {
+        symbolTable.openNewEnvironment()
+        try {
+            consumeAll(TokenType.FOR, TokenType.LPAREN)
+            val init = parseExpr() as? Assignment
+                ?: throw CompilerError.at(previous.position, "Expected assignment")
+            if (init.op != Operator.ASSIGN) {
+                throw CompilerError.at(previous.position, "Expected plain assignment")
+            }
+            consume(TokenType.SEMICOLON)
+            val check = parseExpr()
+            consume(TokenType.SEMICOLON)
+            val step = ExprStmt(parseExpr())
+            consume(TokenType.RPAREN)
+            val body = parseStmt()
+            return For(init, check, step, body)
+        } finally {
+            symbolTable.closeEnvironment()
         }
     }
 
-    private fun parseConcreteStmt(): Stmt {
-        return parseStmt() ?: throw CompileError("Expected concrete statement.", previous.pos)
-    }
-
-    private fun parseYield(): Yield {
-        consume(TokenType.YIELD, TokenType.LPAREN, TokenType.RPAREN, TokenType.SEMICOLON)
-        return Yield()
+    private fun parseGoto(): Goto {
+        consumeAll(TokenType.GOTO, TokenType.IDENTIFIER)
+        val identifier = previous.identifier!!
+        consume(TokenType.SEMICOLON)
+        val goto = Goto(null)
+        labelTracker.addGoto(goto, identifier)
+        return goto
     }
 
     private fun parseIf(): If {
-        consume(TokenType.IF, TokenType.LPAREN)
-        val cond = parseExpr()
+        consumeAll(TokenType.IF, TokenType.LPAREN)
+        val condition = parseExpr()
         consume(TokenType.RPAREN)
-        val thenPart = parseConcreteStmt()
-        var elsePart: Stmt? = null
-        if (match(TokenType.ELSE))
-            elsePart = parseConcreteStmt()
-        return If(cond, thenPart, elsePart)
+        val thenPart = parseStmt()
+        val elsePart = if (match(TokenType.ELSE)) parseStmt() else null
+        return If(condition, thenPart, elsePart)
     }
 
-    private fun parseReturn(): Return {
-        consume(TokenType.RETURN)
-        var value: Expr? = null
-        if (!check(TokenType.SEMICOLON))
-            value = parseExpr()
+    private fun parseLabel(): Label {
+        consumeAll(TokenType.LABEL, TokenType.IDENTIFIER)
+        val identifier = previous.identifier!!
         consume(TokenType.SEMICOLON)
-        return Return(value)
-    }
-
-    private fun parseWhile(): While {
-        consume(TokenType.WHILE, TokenType.LPAREN)
-        val cond = parseExpr()
-        consume(TokenType.RPAREN)
-        val body = parseConcreteStmt()
-        return While(cond, body)
-    }
-
-    private fun parseFor(): For {
-        consume(TokenType.FOR, TokenType.LPAREN)
-        symbolTable.enterScope()
-        val init = parseForInit()
-        val check = parseForCheck()
-        consume(TokenType.SEMICOLON)
-        val step = parseForStep()
-        consume(TokenType.RPAREN)
-        val body = parseConcreteStmt()
-        symbolTable.exitScope()
-        return For(init, check, step, body)
-    }
-
-    private fun parseForInit(): Stmt? {
-        return when (peek().type) {
-            TokenType.VAR -> parseVar()
-            TokenType.SEMICOLON -> {
-                consume(TokenType.SEMICOLON)
-                null
-            }
-            else -> parseExprStmt()
-        }
-    }
-
-    private fun parseForCheck(): Expr {
-        if (!check(TokenType.SEMICOLON))
-            return parseExpr()
-
-        // No condition; produce an infinite loop.
-        return Literal(1)
-    }
-
-    private fun parseForStep(): Stmt? {
-        if (!check(TokenType.RPAREN))
-            return ExprStmt(parseExpr())
-        return null
+        val label = Label(LabelSymbol(identifier))
+        symbolTable.defineInFunctionScope(label.symbol)
+        labelTracker.addLabel(label)
+        return label
     }
 
     private fun parseMatch(): Match {
-        consume(TokenType.MATCH, TokenType.LPAREN)
-        val cond = parseExpr()
-        consume(TokenType.RPAREN, TokenType.LBRACE)
-
+        consumeAll(TokenType.MATCH, TokenType.LPAREN)
+        val condition = parseExpr()
+        consumeAll(TokenType.RPAREN, TokenType.LBRACE)
         val cases = mutableListOf<Case>()
         var default: Stmt? = null
         while (!match(TokenType.RBRACE)) {
             if (match(TokenType.ELSE)) {
-                if (default != null)
-                    throw CompileError("Cannot have multiple default cases in match.", previous.pos)
+                if (default != null) {
+                    throw CompilerError.at(
+                        previous.position,
+                        "Match statement may have only one default case."
+                    )
+                }
                 consume(TokenType.ARROW)
-                default = parseConcreteStmt()
+                default = parseStmt()
             } else {
                 val expr = parseExpr()
                 consume(TokenType.ARROW)
-                val body = parseConcreteStmt()
+                val body = parseStmt()
                 cases.add(Case(expr, body))
             }
         }
-        return Match(cond, cases, default)
+        return Match(condition, cases, default)
     }
 
-    private fun parseLabel(): Label {
-        consume(TokenType.LABEL, TokenType.IDENTIFIER)
-        val ident = previous
-        consume(TokenType.SEMICOLON)
-
-        // Create the symbol table entry for the label.
-        val sym = LabelSymbol(ident.literal as String)
-        symbolTable.defineLabel(ident, sym)
-
-        // Backpatch any references to this label.
-        val targets = unresolvedGotos[ident.literal]
-        if (targets != null) {
-            for (entry in targets)
-                entry.second.target = sym
-            unresolvedGotos.remove(ident.literal)
+    private fun parseReturn(): Return {
+        consume(TokenType.RETURN)
+        val value = if (match(TokenType.SEMICOLON)) {
+            Literal.ofInt(0)
+        } else {
+            val expr = parseExpr()
+            consume(TokenType.SEMICOLON)
+            expr
         }
-        return Label(sym)
+        return Return(value)
     }
 
-    private fun parseGoto(): Goto {
-        consume(TokenType.GOTO, TokenType.IDENTIFIER)
-        val ident = previous
-        consume(TokenType.SEMICOLON)
-
-        var target: LabelSymbol? = null
-        if (symbolTable.defined(ident.literal as String)) {
-            val sym = symbolTable.get(ident, ident.literal)
-            target = sym as? LabelSymbol ?: throw CompileError("Expected label symbol.", previous.pos)
-        }
-
-        val result = Goto(target)
-        if (target == null) {
-            val unresolved = unresolvedGotos[ident.literal]
-            if (unresolved == null)
-                unresolvedGotos[ident.literal] = mutableListOf(Pair(ident, result))
-            else
-                unresolved.add(Pair(ident, result))
-        }
-        return result
+    private fun parseWhile(): While {
+        consumeAll(TokenType.WHILE, TokenType.LPAREN)
+        val condition = parseExpr()
+        consume(TokenType.RPAREN)
+        val body = parseStmt()
+        return While(condition, body)
     }
 
-    private fun parseLet(): Stmt? {
-        // Parse the statement contents.
-        consume(TokenType.LET, TokenType.IDENTIFIER)
-        val ident = previous
-        consume(TokenType.ASSIGN)
-
-        // Force the right hand side to be a known variable reference.
-        // Ex. Accept $2 but not a variable declared with "var".
-        val rhs = parseExprStmt()
-        val ref = rhs.expr as? VarRef
-        if (ref == null || ref.symbol.frameID == -1)
-            throw CompileError("Right hand side of let must be a known variable reference.", previous.pos)
-
-        // Create an alias for the frame reference and add it to the symbol table.
-        symbolTable.define(ident, VarSymbol(ident.literal as String, ref.symbol.frameID))
-        return null
-    }
-
-    private fun parseVar(): Stmt? {
-        // Parse left hand side
-        consume(TokenType.VAR, TokenType.IDENTIFIER)
-        val symbol = VarSymbol(previous.literal as String)
-        symbolTable.define(previous, symbol)
+    private fun parseVarDecl(): Stmt {
+        consumeAll(TokenType.VAR, TokenType.IDENTIFIER)
+        val identifier = previous.identifier!!
+        val symbol = VarSymbol(identifier, false)
+        symbolTable.define(symbol)
         consume(TokenType.ASSIGN)
         return when (peek().type) {
-            TokenType.ARRAY -> parseEmptyArrayInit(symbol)
-            TokenType.LBRACKET -> parseStaticArrayInit(symbol)
+            TokenType.ARRAY -> parseEmptyArrayDecl(symbol)
+            TokenType.LBRACKET -> parseArrayStaticInitializer(symbol)
             else -> parseNormalVarDecl(symbol)
         }
     }
 
-    private fun parseNormalVarDecl(symbol: VarSymbol): Stmt? {
-        unresolvedVars.add(Pair(symbol, 1))
-        val assignment = BinaryExpr(VarRef(symbol), TokenType.ASSIGN, parseExpr())
-        consume(TokenType.SEMICOLON)
-        return ExprStmt(assignment)
+    private fun parseEmptyArrayDecl(symbol: VarSymbol): Block {
+        consumeAll(TokenType.ARRAY, TokenType.LBRACKET, TokenType.INT)
+        val count = previousValue.intValue()
+        consumeAll(TokenType.RBRACKET, TokenType.SEMICOLON)
+        val contents = mutableListOf<Stmt>()
+        for (i in 0 until count) {
+            symbolTable.define(symbol)
+            val ref = ArrayRef(symbol, Literal.ofInt(i))
+            contents.add(ExprStmt(Assignment(ref, Literal.ofInt(0), Operator.ASSIGN)))
+        }
+        return Block(contents)
     }
 
-    private fun parseEmptyArrayInit(symbol: VarSymbol): Stmt? {
-        consume(TokenType.ARRAY, TokenType.LBRACKET, TokenType.INT)
-        unresolvedVars.add(Pair(symbol, previous.literal as Int))
-        consume(TokenType.RBRACKET, TokenType.SEMICOLON)
-        return null
-    }
-
-    private fun parseStaticArrayInit(symbol: VarSymbol): Stmt? {
-        val initializers = mutableListOf<Stmt>()
+    private fun parseArrayStaticInitializer(symbol: VarSymbol): Block {
         consume(TokenType.LBRACKET)
+        val contents = mutableListOf<Stmt>()
         if (!check(TokenType.RBRACKET)) {
             do {
-                val expr = parseExpr() as? Literal ?: throw CompileError("Expected constant.", previous.pos)
-                val ref = ArrayRef(symbol, Literal(initializers.size))
-                initializers.add(ExprStmt(BinaryExpr(ref, TokenType.ASSIGN, expr)))
+                val ref = ArrayRef(symbol, Literal.ofInt(contents.size))
+                val expr = parseExpr()
+                contents.add(ExprStmt(Assignment(ref, expr, Operator.ASSIGN)))
             } while (match(TokenType.COMMA))
         }
-        consume(TokenType.RBRACKET, TokenType.SEMICOLON)
-        unresolvedVars.add(Pair(symbol, initializers.size))
-        return Block(initializers)
+        consumeAll(TokenType.RBRACKET, TokenType.SEMICOLON)
+        return Block(contents)
+    }
+
+    private fun parseNormalVarDecl(symbol: VarSymbol): ExprStmt {
+        val rhs = parseExpr()
+        consume(TokenType.SEMICOLON)
+        return ExprStmt(Assignment(VarRef(symbol), rhs, Operator.ASSIGN))
+    }
+
+    private fun parseYield(): Yield {
+        consumeAll(TokenType.YIELD, TokenType.SEMICOLON)
+        return Yield()
     }
 
     private fun parseExprStmt(): ExprStmt {
@@ -491,35 +445,68 @@ class Parser(private val tokens: List<Token>, private val log: Log) {
         return ExprStmt(expr)
     }
 
-    internal val previous: Token
-        get() = tokens[position - 1]
-
-    private fun advance(): Token {
-        assert(position < tokens.size)
-        return tokens[position++]
+    internal fun parseExpr(precedence: Int = Operator.NO_PRECEDENCE): Expr {
+        val token = advance()
+        val prefixAction = prefixActions[token.type] ?: throw CompilerError.at(
+            token.position,
+            "Expected expression.",
+        )
+        var expr = prefixAction.parse(this)
+        while (precedence < precedenceOfNext()) {
+            val next = advance()
+            val infixAction = infixActions[next.type]!!
+            expr = infixAction.parse(expr, this)
+        }
+        return expr
     }
 
-    private fun peek(): Token {
-        if (atEnd)
-            throw CompileError("Reached EOF while parsing.", tokens.last().pos)
-        return tokens[position]
+    private fun precedenceOfNext(): Int {
+        if (infixActions.containsKey(peek().type))
+            return infixActions[peek().type]!!.precedence()
+        return Operator.NO_PRECEDENCE
     }
 
     internal fun consume(type: TokenType) {
         if (!match(type)) {
             // Provide a more precise error message for semicolons.
             if (type == TokenType.SEMICOLON)
-                throw CompileError("Expected semicolon after statement.", previous.pos)
+                throw CompilerError.at(previous.position, "Expected semicolon after statement.")
 
             // General case. Show expected token and what we actually found.
             val actualTok = peek()
             val actual = peek().type.toString()
             val expected = type.toString()
-            throw CompileError("Expected \"$expected\", found \"$actual\".", actualTok.pos)
+            throw CompilerError.at(actualTok.position, "Expected \"$expected\", found \"$actual\".")
         }
     }
 
-    private fun consume(vararg types: TokenType) {
+    private fun synchronizeToDecl() {
+        while (!atEnd) {
+            if (peek().type in declBeginnings)
+                return
+            advance()
+        }
+    }
+
+    private fun synchronizeToStmt() {
+        while (!atEnd) {
+            when (peek().type) {
+                in stmtBeginnings -> {
+                    return
+                }
+                TokenType.SEMICOLON -> {
+                    advance()
+                    return
+                }
+                else -> {
+                    advance()
+                }
+            }
+
+        }
+    }
+
+    private fun consumeAll(vararg types: TokenType) {
         for (type in types)
             consume(type)
     }
@@ -538,19 +525,20 @@ class Parser(private val tokens: List<Token>, private val log: Log) {
         return false
     }
 
-    private fun synchronizeToDecl() {
-        while (!atEnd) {
-            if (peek().type in DECL_BEGINNINGS)
-                return
-            advance()
-        }
+    internal val previous: Token
+        get() = tokens[position - 1]
+
+    internal val previousValue: Literal
+        get() = previous.value!!
+
+    private fun advance(): Token {
+        assert(position < tokens.size)
+        return tokens[position++]
     }
 
-    private fun synchronizeToStmt() {
-        while (!atEnd) {
-            if (match(TokenType.SEMICOLON) || peek().type in STMT_BEGINNINGS)
-                return
-            advance()
-        }
+    private fun peek(): Token {
+        if (atEnd)
+            throw CompilerError.at(tokens.last().position, "Reached EOF while parsing.")
+        return tokens[position]
     }
 }

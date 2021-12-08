@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Insets?>
+<GridPane id="configGridPane"
+          xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="com.thane98.exalt.ui.controllers.ConfigFormController"
+          alignment="center" hgap="10" vgap="10">
+    <padding>
+        <Insets top="25" right="25" bottom="25" left="25"/>
+    </padding>
+
+    <Text text="Translate Function Names" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+    <CheckBox fx:id="translateFunctionNamesCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+    <Text text="Enable Server" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+    <CheckBox fx:id="enableServerCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+    <Text text="Server Port" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+    <Spinner fx:id="serverPortSpinner" min="1" max="65535" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+</GridPane>
